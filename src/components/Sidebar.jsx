@@ -30,12 +30,12 @@ const Sidebar = () => {
         { title: "Schedule", src: calendarImage },
       ],
     },
-    { title: "Search", src: searchImage,gap:true },
+    { title: "Kanban", src: calendarImage,gap:true  },
+    { title: "Search", src: searchImage},
     { title: "Analytics", src: chartImage },
     { title: "Inbox", src: chatImage},
     { title: "Accounts", src: userImage },
-    { title: "Schedule", src: calendarImage },
-    { title: "Setting", src: settingImage,gap:true },
+    { title: "Settings", src: settingImage,gap:true },
   ];
 
 
@@ -60,7 +60,7 @@ const Sidebar = () => {
       <div
         className={` ${
           open ? "w-72" : "w-20 "
-        } bg-purple-800 h-screen p-5  pt-8 relative duration-300 font-sans`}
+        } bg-[#3F4FAF] p-5  pt-8 relative duration-300 font-sans rounded-lg h-screen`}
       >
         <img
           src={controlImage}
