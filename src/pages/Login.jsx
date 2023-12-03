@@ -40,7 +40,7 @@ const Login = () => {
     <Helmet>
       <title> Login</title>
     </Helmet>
-    <div className="flex items-center justify-center h-screen overflow-x-hidden">
+    <div className="flex items-center justify-center h-screen overflow-x-hidden" style={{ maxHeight: "calc(100vh - 110px)" }}>
       <div className="bg-white p-8 rounded-md shadow-lg w-96">
         {/* Increased width to w-96 */}
         <h2 className="text-2xl font-bold mb-4">Login</h2>
