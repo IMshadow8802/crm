@@ -37,23 +37,83 @@ import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
 import { Helmet } from "react-helmet";
 import readXlsxFile from "read-excel-file";
-import pdfMake from "pdfmake/build/pdfmake";
-import * as pdfFonts from "pdfmake/build/vfs_fonts";
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 import Papa from "papaparse";
 
 const Complaint = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const [status, setStatus] = useState([]);
+  const [assign, setAssign] = useState([]);
+  const [ctype, setCtype] = useState([]);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/Status/FetchStatus`,
+          {
+            Id: 0,
+          }
+        );
+        setStatus(response.data);
+      } catch (error) {
+        console.error("Error fetching Status:", error);
+      }
+    };
+
+    fetchStatus();
+  }, []);
+
+  useEffect(() => {
+    const fetchCType = async () => {
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/ComplainType/FetchComplainType`,
+          {
+            Id: 0,
+          }
+        );
+        setCtype(response.data);
+      } catch (error) {
+        console.error("Error fetching Complaint Type:", error);
+      }
+    };
+
+    fetchCType();
+  }, []);
+
+  useEffect(() => {
+    const fetchAssign = async () => {
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/UserList/FetchUserList`,
+          {
+            UserId: 0,
+          }
+        );
+        setAssign(response.data);
+      } catch (error) {
+        console.error("Error fetching Assign:", error);
+      }
+    };
+
+    fetchAssign();
+  }, []);
 
   const columns = [
     {
-        accessorKey: "Date",
-        header: "Date",
-      },
-      {
-        accessorKey: "ComplainNo",
-        header: "Complain No",
-      },
+      accessorKey: "Date",
+      header: "Date",
+    },
+    // {
+    //   accessorKey: "ComplainNo",
+    //   header: "Complain No",
+    // },
+    {
+      accessorKey: "ComplainType",
+      header: "Complaint Type",
+      editVariant: "select",
+      editSelectOptions: ctype.map((ct) => ct.ComplainType),
+    },
     {
       accessorKey: "CustomerName",
       header: "Customer Name",
@@ -76,12 +136,16 @@ const Complaint = () => {
     },
     {
       accessorKey: "Assign",
-      header: "Assign",
+      header: "Assigned To",
+      editVariant: "select",
+      editSelectOptions: assign.map((assignedTo) => assignedTo.UserName),
     },
     {
-        accessorKey: "Status",
-        header: "Status",
-      },
+      accessorKey: "Status",
+      header: "Status",
+      editVariant: "select",
+      editSelectOptions: status.map((status) => status.Status),
+    },
   ];
 
   const handleExportData = () => {
@@ -115,63 +179,82 @@ const Complaint = () => {
     document.body.removeChild(a);
   };
 
-  const downloadPdf = () => {
-    const docDefinition = {
-      pageOrientation: "landscape",
-      content: [
-        {
-          text: "ENQUIRY",
-          fontSize: 25,
-          color: "#4285f4",
-          bold: true,
-          alignment: "left",
-          margin: [0, 0, 0, 20],
-        },
-        {
-          table: {
-            headerRows: 1,
-            // widths: ["*", "*", "*", "*", "*", "*", "*", "*", "*", "*", "*"],
-            // Add "*" for each column to distribute the width equally
-            body: [
-              [
-                { text: "Date", style: "tableHeader" },
-                { text: "Name", style: "tableHeader" },
-                { text: "MobileNo", style: "tableHeader" },
-                { text: "EmailId", style: "tableHeader" },
-                { text: "AltMobile", style: "tableHeader" },
-                { text: "Class", style: "tableHeader" },
-                { text: "Subject", style: "tableHeader" },
-                { text: "School", style: "tableHeader" },
-                { text: "Remarks", style: "tableHeader" },
-                { text: "Source", style: "tableHeader" },
-                { text: "RefName", style: "tableHeader" },
-              ],
-              ...tableData.map((item) => [
-                item.Date,
-                item.Name,
-                item.MobileNo,
-                item.EmailId,
-                item.AltMobile,
-                item.ClassId,
-                item.SubjectId,
-                item.School,
-                item.Remarks,
-                item.Source,
-                item.RefName,
-              ]),
-            ],
-          },
-        },
-      ],
-      styles: {
-        tableHeader: {
-          fillColor: "#f2f2f2",
-          bold: true,
-        },
-      },
-    };
+  const downloadPdf = () => {};
 
-    pdfMake.createPdf(docDefinition).download("Enquiry.pdf");
+  function formatDates(originalData) {
+    // Create a new object to avoid modifying the original data
+    const formattedData = { ...originalData };
+
+    // Format 'Date'
+    const dateParts = formattedData.Date.split("-");
+    const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+    formattedData.Date = formattedDate;
+    return formattedData;
+  }
+
+  const [currentRowData, setCurrentRowData] = useState(null);
+  //console.log(currentRowData);
+  const [currentRow, setCurrentRow] = useState(null);
+
+  const handleSaveCell = (cell, value) => {
+    const { row, column } = cell;
+    setCurrentRow(row);
+    const accessorKey = column.id;
+
+    // Update the changes for the current row
+    setCurrentRowData((prevData) => ({
+      ...prevData,
+      [accessorKey]: value,
+    }));
+  };
+
+  const handleUpdate = async () => {
+    try {
+      if (Object.keys(currentRowData).length > 0 && currentRow) {
+        // Include the original data of the row
+        const updatedRow = {
+          ...currentRow.original,
+          ...currentRowData,
+        };
+        const statusId = status.find(
+          (status) => status.Status === updatedRow.Status
+        )?.Id;
+        const assignToId = assign.find(
+          (assignedTo) => assignedTo.UserName === updatedRow.Assign
+        )?.UserId;
+
+        const cTypeId = ctype.find(
+          (ct) => ct.ComplainType === updatedRow.ComplainType
+        )?.Id;
+
+        // Update formattedData with the retrieved IDs
+        const formattedData = {
+          ...formatDates(updatedRow),
+          Status: statusId,
+          Assign: assignToId,
+          ComplainType:cTypeId
+        };
+
+        console.log(formattedData);
+        await axios.post(
+          `${API_BASE_URL}/Complain/SaveComplainRegister`,
+          formattedData
+        );
+        await fetchData();
+        enqueueSnackbar("Complaint updated successfully!", {
+          variant: "success",
+        });
+
+        // Clear the current row data after the update
+        setCurrentRow(null);
+        setCurrentRowData(null);
+      } else {
+        enqueueSnackbar("No data to update.", { variant: "warning" });
+      }
+    } catch (error) {
+      console.log("Error updating Complaint:", error);
+      enqueueSnackbar("Failed to update Complaint!", { variant: "error" });
+    }
   };
 
   const [tableData, setTableData] = useState([]);
@@ -181,7 +264,7 @@ const Complaint = () => {
         `${API_BASE_URL}/Complain/FetchComplainRegister`,
         { Id: 0 }
       );
-      console.log(response.data);
+      //console.log(response.data);
       setTableData(response.data);
     } catch (error) {
       console.log(error);
@@ -245,41 +328,35 @@ const Complaint = () => {
     columns,
     data: tableData,
     createDisplayMode: "modal",
-    editDisplayMode: "modal",
+    editDisplayMode: "cell",
     enableEditing: true,
+    enableRowActions: true,
     getRowId: (row) => row.id,
     muiTableContainerProps: {
       sx: {
         maxHeight: "450px",
       },
     },
-
-    renderCreateRowDialogContent: ({ table, row, internalEditComponents }) => (
+    muiTableBodyCellProps: ({ cell }) => ({
+      onBlur: (event) => {
+        handleSaveCell(cell, event.target.value);
+      },
+    }),
+    renderCreateRowDialogContent: ({ table }) => (
       <>
         <CreateEnquiryModal
           onClose={() => table.setCreatingRow(null)}
           fetchData={fetchData}
           setTableData={setTableData}
           columns={columns}
+          status={status}
+          assign={assign}
+          ctype={ctype}
         />
       </>
     ),
-    renderEditRowDialogContent: ({ table, row, internalEditComponents }) => (
-      <EditEnquiryModal
-        onClose={() => table.setEditingRow(null)}
-        fetchData={fetchData}
-        setTableData={setTableData}
-        columns={columns}
-        row={row}
-      />
-    ),
-    renderRowActions: ({ row, table }) => (
+    renderRowActions: ({ row }) => (
       <Box sx={{ display: "flex", gap: "1rem" }}>
-        <Tooltip title="Edit">
-          <IconButton color="primary" onClick={() => table.setEditingRow(row)}>
-            <Edit />
-          </IconButton>
-        </Tooltip>
         <Tooltip title="Delete">
           <IconButton color="error" onClick={() => handleDeleteRow(row)}>
             <Delete />
@@ -322,6 +399,25 @@ const Complaint = () => {
         </Button>
       </Box>
     ),
+    renderBottomToolbarCustomActions: () => (
+      <Box
+        sx={{
+          display: "flex",
+          gap: "1rem",
+          p: "0.5rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <Button
+          color="success"
+          onClick={handleUpdate}
+          variant="contained"
+          disabled={!currentRowData}
+        >
+          Update
+        </Button>
+      </Box>
+    ),
   });
 
   //   return <MaterialReactTable table={table} />;
@@ -355,85 +451,45 @@ export default Complaint;
 export const CreateEnquiryModal = ({
   onClose,
   fetchData,
-  setTableData,
   columns,
+  status,
+  assign,
+  ctype
 }) => {
-  const [values, setValues] = useState(() =>
-    columns.reduce((acc, column) => {
-      acc[column.accessorKey ?? ""] = "";
-      return acc;
-    }, {})
-  );
+  const [values, setValues] = useState(() => {
+    const currentDate = new Date();
+    const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${currentDate.getDate().toString().padStart(2, "0")}`;
+  
+    return {
+      ...columns.reduce((acc, column) => {
+        acc[column.accessorKey ?? ""] = "";
+        return acc;
+      }, {}),
+      Date: formattedDate,
+    };
+  });  
 
   const { enqueueSnackbar } = useSnackbar();
-  const [sources, setSources] = useState([]);
-  const [selectedSource, setSelectedSource] = useState("");
-  const [subject, setSubject] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedAssign, setSelectedAssign] = useState("");
+  const [selectedCType, setSelectedCType] = useState("");
 
-  useEffect(() => {
-    const fetchSources = async () => {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Source/FetchSource`,
-          { SourceId: 0 }
-        );
-        setSources(response.data);
-      } catch (error) {
-        console.error("Error fetching sources:", error);
-      }
-    };
-
-    fetchSources();
-  }, []);
-
-  const handleSourceChange = (event) => {
-    setSelectedSource(event.target.value);
+  const handleStatusChange = (event) => {
+    setSelectedStatus(event.target.value);
   };
 
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Subject/FetchSubject`,
-          { SubjectId: 0 }
-        );
-        setSubject(response.data);
-      } catch (error) {
-        console.error("Error fetching subject:", error);
-      }
-    };
-
-    fetchSubjects();
-  }, []);
-
-  const handleSubjectChange = (event) => {
-    setSelectedSubject(event.target.value);
+  const handleAssignChange = (event) => {
+    setSelectedAssign(event.target.value);
   };
 
-  useEffect(() => {
-    const fetchClass = async () => {
-      try {
-        const response = await axios.post(`${API_BASE_URL}/Class/FetchClass`, {
-          ClassId: 0,
-        });
-        setClasses(response.data);
-      } catch (error) {
-        console.error("Error fetching class:", error);
-      }
-    };
-
-    fetchClass();
-  }, []);
-
-  const handleClassChange = (event) => {
-    setSelectedClass(event.target.value);
+  const handleCTypeChange = (event) => {
+    setSelectedCType(event.target.value);
   };
 
   const handleSubmit = async () => {
-    const requiredFields = ["Name", "MobileNo"]; // Add other required fields here
+    const requiredFields = ["CustomerName", "ContactNo"];
 
     const missingFields = requiredFields.filter((field) => !values[field]);
 
@@ -441,7 +497,7 @@ export const CreateEnquiryModal = ({
       missingFields.forEach((field) => {
         enqueueSnackbar(`${field} is required.`, { variant: "error" });
       });
-      return; // Do not proceed with submission if fields are missing
+      return;
     }
     const userDataString = localStorage.getItem("userData");
     if (!userDataString) {
@@ -453,7 +509,7 @@ export const CreateEnquiryModal = ({
     const userData = JSON.parse(userDataString);
 
     // Retrieve compid and branchid from the specific object inside userdata array
-    const compid = userData[0]?.CompId; // Assuming compid is in the first object of userdata array
+    const compid = userData[0]?.CompId;
     const branchid = userData[0]?.BranchId;
 
     try {
@@ -477,39 +533,37 @@ export const CreateEnquiryModal = ({
         .padStart(2, "0")}`;
       const updatedValues = {
         ...values,
-        EnquiryId: 0,
+        Id: 0,
+        ComplainNo:0,
         BranchId: branchid,
         CompId: compid,
         CreateUid: 2,
         EditUid: 2,
         EditDate: formattedDate,
         CreateDate: formattedDate,
-        Source: selectedSource,
-        SubjectId: selectedSubject,
-        ClassId: selectedClass,
+        Status: selectedStatus,
+        Assign: selectedAssign,
+        ComplainType:selectedCType
       };
 
       console.log(updatedValues);
 
       await axios.post(
-        `${API_BASE_URL}/Enquiry/SaveDataEnquiry`,
+        `${API_BASE_URL}/Complain/SaveComplainRegister`,
         updatedValues
       );
 
-      await fetchData(setTableData);
-      enqueueSnackbar("Enquiry created successfully!", { variant: "success" });
+      fetchData();
+      enqueueSnackbar("Complaint created successfully!", {
+        variant: "success",
+      });
 
-      setValues(() =>
-        columns.reduce((acc, column) => {
-          acc[column.accessorKey ?? ""] = "";
-          return acc;
-        }, {})
-      );
+      resetValues();
 
       onClose();
     } catch (error) {
       console.log(error);
-      enqueueSnackbar("Failed to create Enquiry!", { variant: "error" });
+      enqueueSnackbar("Failed to create Complaint!", { variant: "error" });
     }
   };
 
@@ -520,9 +574,9 @@ export const CreateEnquiryModal = ({
         return acc;
       }, {})
     );
-    setSelectedSource("");
-    setSelectedSubject("");
-    setSelectedClass("");
+    setSelectedStatus("");
+    setSelectedAssign("");
+    setSelectedCType("");
   };
 
   const theme = useTheme();
@@ -530,465 +584,131 @@ export const CreateEnquiryModal = ({
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
-    <ThemeProvider theme={theme}>
-      <Dialog
-        open={open}
-        fullWidth={true}
-        maxWidth={isSmallScreen ? "xs" : "md"}
-      >
-        <DialogTitle textAlign="center">ADD LEADS</DialogTitle>
-        <DialogContent>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <Box
-              display="grid"
-              gap="30px"
-              gridTemplateColumns="repeat(4, minmax(0, 1fr))"
-              sx={{
-                "& >div": { gridColumn: isNonMobile ? undefined : "span 4" },
-              }}
-            >
-              {columns.map((column, index) => (
-                <React.Fragment key={index}>
-                  {column.accessorKey === "Date" ? (
-                    <TextField
-                      fullWidth
-                      variant="filled"
-                      //label={column.header}
-                      type="date"
-                      name={column.accessorKey}
-                      value={values[column.accessorKey]}
-                      onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                      sx={{ gridColumn: "span 2" }}
-                    />
-                  ) : column.accessorKey === "SubjectId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedSubject}
-                        onChange={handleSubjectChange}
-                      >
-                        {subject.map((subject) => (
-                          <MenuItem
-                            key={subject.SubjectId}
-                            value={subject.SubjectId}
-                          >
-                            {subject.SubjectName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "ClassId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedClass}
-                        onChange={handleClassChange}
-                      >
-                        {classes.map((classes) => (
-                          <MenuItem
-                            key={classes.ClassId}
-                            value={classes.ClassId}
-                          >
-                            {classes.ClassName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "Source" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedSource}
-                        onChange={handleSourceChange}
-                      >
-                        {sources.map((source) => (
-                          <MenuItem
-                            key={source.SourceId}
-                            value={source.SourceId}
-                          >
-                            {source.Source}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <TextField
-                      fullWidth
-                      variant="filled"
-                      label={column.header}
-                      name={column.accessorKey}
-                      onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                      sx={{ gridColumn: "span 2" }}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </Box>
-          </form>
-        </DialogContent>
-        <DialogActions sx={{ p: "1.25rem" }}>
-          <Button
-            color="secondary"
-            onClick={() => {
-              onClose();
-              resetValues();
+    <Dialog
+      open={open}
+      fullWidth={true}
+      maxWidth={isSmallScreen ? "xs" : "md"}
+      PaperProps={{
+        style: { borderRadius: 10 },
+      }}
+    >
+      <div className="bg-[#3F4FAF] p-4 text-white text-center">
+        <DialogTitle>CREATE COMPLAINT</DialogTitle>
+      </div>
+      <DialogContent>
+        <form onSubmit={(e) => e.preventDefault()}>
+          <Box
+            display="grid"
+            gap="30px"
+            gridTemplateColumns="repeat(4, minmax(0, 1fr))"
+            sx={{
+              "& >div": { gridColumn: isNonMobile ? undefined : "span 4" },
             }}
-            variant="outlined"
           >
-            Cancel
-          </Button>
-          <Button color="secondary" onClick={handleSubmit} variant="contained">
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </ThemeProvider>
-  );
-};
-
-// Import necessary dependencies from MUI and other libraries
-
-export const EditEnquiryModal = ({
-  onClose,
-  fetchData,
-  setTableData,
-  columns,
-  row,
-}) => {
-  const [values, setValues] = useState(row.original);
-  console.log(values);
-
-  const { enqueueSnackbar } = useSnackbar();
-  const [sources, setSources] = useState([]);
-  const [selectedSource, setSelectedSource] = useState("");
-  const [subject, setSubject] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState("");
-
-  useEffect(() => {
-    const fetchSources = async () => {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Source/FetchSource`,
-          { SourceId: 0 }
-        );
-        setSources(response.data);
-
-        // Check if row.original.Source exists and set the initial value
-        if (row.original.Source) {
-          const selectedSourceData = response.data.find(
-            (sourceData) => sourceData.SourceId === row.original.Source
-          );
-          setSelectedSource(
-            selectedSourceData ? selectedSourceData.SourceId : ""
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching sources:", error);
-      }
-    };
-
-    fetchSources();
-  }, [row.original.Source]);
-
-  const handleSourceChange = (event) => {
-    setSelectedSource(event.target.value);
-  };
-
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Subject/FetchSubject`,
-          { SubjectId: 0 }
-        );
-        setSubject(response.data);
-
-        // Check if row.original.SubjectId exists and set the initial value
-        if (row.original.SubjectId) {
-          const selectedSubjectData = response.data.find(
-            (subjectData) => subjectData.SubjectId === row.original.SubjectId
-          );
-          setSelectedSubject(
-            selectedSubjectData ? selectedSubjectData.SubjectId : ""
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching subject:", error);
-      }
-    };
-
-    fetchSubjects();
-  }, [row.original.SubjectId]);
-
-  const handleSubjectChange = (event) => {
-    setSelectedSubject(event.target.value);
-  };
-
-  useEffect(() => {
-    const fetchClass = async () => {
-      try {
-        const response = await axios.post(`${API_BASE_URL}/Class/FetchClass`, {
-          ClassId: 0,
-        });
-        setClasses(response.data);
-
-        // Check if row.original.ClassId exists and set the initial value
-        if (row.original.ClassId) {
-          const selectedClassData = response.data.find(
-            (classData) => classData.ClassId === row.original.ClassId
-          );
-          setSelectedClass(selectedClassData ? selectedClassData.ClassId : "");
-        }
-      } catch (error) {
-        console.error("Error fetching class:", error);
-      }
-    };
-
-    fetchClass();
-  }, [row.original.ClassId]);
-
-  const handleClassChange = (event) => {
-    setSelectedClass(event.target.value);
-  };
-
-  const handleSubmit = async () => {
-    const requiredFields = ["Name", "MobileNo"]; // Add other required fields here
-
-    const missingFields = requiredFields.filter((field) => !values[field]);
-
-    if (missingFields.length > 0) {
-      missingFields.forEach((field) => {
-        enqueueSnackbar(`${field} is required.`, { variant: "error" });
-      });
-      return; // Do not proceed with submission if fields are missing
-    }
-    const userDataString = localStorage.getItem("userData");
-    if (!userDataString) {
-      enqueueSnackbar("User data not found.", { variant: "error" });
-      return;
-    }
-
-    // Parse userdata array from JSON
-    const userData = JSON.parse(userDataString);
-
-    // Retrieve compid and branchid from the specific object inside userdata array
-    const compid = userData[0]?.CompId; // Assuming compid is in the first object of userdata array
-    const branchid = userData[0]?.BranchId;
-
-    try {
-      const currentDate = new Date();
-      const formattedDate = `${currentDate.getFullYear()}-${(
-        currentDate.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}-${currentDate
-        .getDate()
-        .toString()
-        .padStart(2, "0")}T${currentDate
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${currentDate
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}:${currentDate
-        .getSeconds()
-        .toString()
-        .padStart(2, "0")}`;
-      const updatedValues = {
-        ...values,
-        EnquiryId: row.original?.EnquiryId || 0,
-        BranchId: row.original?.BranchId || branchid,
-        CompId: row.original?.CompId || compid,
-        CreateUid: row.original?.CreateUid || 2,
-        EditUid: row.original?.EditUid || 2,
-        EditDate: formattedDate,
-        CreateDate: row.original?.CreateDate || formattedDate,
-        Source: selectedSource,
-        SubjectId: selectedSubject,
-        ClassId: selectedClass,
-      };
-
-      console.log(updatedValues);
-
-      await axios.post(
-        `${API_BASE_URL}/Enquiry/SaveDataEnquiry`,
-        updatedValues
-      );
-
-      await fetchData(setTableData);
-      enqueueSnackbar("Enquiry updated successfully!", { variant: "success" });
-
-      setValues({});
-      onClose();
-    } catch (error) {
-      console.log(error);
-      enqueueSnackbar("Failed to update Enquiry!", { variant: "error" });
-    }
-  };
-
-  const resetValues = () => {
-    setValues({});
-    setSelectedSource("");
-    setSelectedSubject("");
-    setSelectedClass("");
-  };
-
-  const theme = useTheme();
-  const isNonMobile = useMediaQuery("(min-width:600px)");
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
-
-  return (
-    <ThemeProvider theme={theme}>
-      <Dialog
-        open={open}
-        fullWidth={true}
-        maxWidth={isSmallScreen ? "xs" : "md"}
-      >
-        <DialogTitle textAlign="center">EDIT LEADS</DialogTitle>
-        <DialogContent>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <Box
-              display="grid"
-              gap="30px"
-              gridTemplateColumns="repeat(4, minmax(0, 1fr))"
-              sx={{
-                "& >div": { gridColumn: isNonMobile ? undefined : "span 4" },
-              }}
-            >
-              {columns.map((column, index) => (
-                <React.Fragment key={index}>
-                  {column.accessorKey === "Date" ? (
-                    <TextField
+            {columns.map((column, index) => (
+              <React.Fragment key={index}>
+                {column.accessorKey === "Date" ? (
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    type="date"
+                    name={column.accessorKey}
+                    value={values[column.accessorKey]}
+                    onChange={(e) =>
+                      setValues({
+                        ...values,
+                        [e.target.name]: e.target.value,
+                      })
+                    }
+                    sx={{ gridColumn: "span 1" }}
+                  />
+                ): column.accessorKey === "ComplainType" ? (
+                  <FormControl sx={{ gridColumn: "span 1" }}>
+                    <InputLabel>{column.header}</InputLabel>
+                    <Select
                       fullWidth
-                      variant="filled"
-                      type="date"
-                      name={column.accessorKey}
-                      //value={values[column.accessorKey]}
-                      value={
-                        values[column.accessorKey]
-                          ? values[column.accessorKey].split("T")[0]
-                          : ""
-                      }
-                      onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                      sx={{ gridColumn: "span 2" }}
-                    />
-                  ) : column.accessorKey === "SubjectId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedSubject}
-                        onChange={handleSubjectChange}
-                      >
-                        {subject.map((subject) => (
-                          <MenuItem
-                            key={subject.SubjectId}
-                            value={subject.SubjectId}
-                          >
-                            {subject.SubjectName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "ClassId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedClass}
-                        onChange={handleClassChange}
-                      >
-                        {classes.map((classes) => (
-                          <MenuItem
-                            key={classes.ClassId}
-                            value={classes.ClassId}
-                          >
-                            {classes.ClassName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "Source" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedSource}
-                        onChange={handleSourceChange}
-                      >
-                        {sources.map((source) => (
-                          <MenuItem
-                            key={source.SourceId}
-                            value={source.SourceId}
-                          >
-                            {source.Source}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <TextField
+                      variant="standard"
+                      value={selectedCType}
+                      onChange={handleCTypeChange}
+                    >
+                      {ctype.map((ct) => (
+                        <MenuItem key={ct.Id} value={ct.Id}>
+                          {ct.ComplainType}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )  : column.accessorKey === "Status" ? (
+                  <FormControl sx={{ gridColumn: "span 1" }}>
+                    <InputLabel>{column.header}</InputLabel>
+                    <Select
                       fullWidth
-                      variant="filled"
-                      label={column.header}
-                      name={column.accessorKey}
-                      value={values[column.accessorKey]}
-                      onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                      sx={{ gridColumn: "span 2" }}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </Box>
-          </form>
-        </DialogContent>
-        <DialogActions sx={{ p: "1.25rem" }}>
-          <Button
-            color="secondary"
-            onClick={() => {
-              onClose();
-              resetValues();
-            }}
-            variant="outlined"
-          >
-            Cancel
-          </Button>
-          <Button color="secondary" onClick={handleSubmit} variant="contained">
-            Update
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </ThemeProvider>
+                      variant="standard"
+                      value={selectedStatus}
+                      onChange={handleStatusChange}
+                    >
+                      {status.map((stat) => (
+                        <MenuItem key={stat.Id} value={stat.Id}>
+                          {stat.Status}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : column.accessorKey === "Assign" ? (
+                  <FormControl sx={{ gridColumn: "span 1" }}>
+                    <InputLabel>{column.header}</InputLabel>
+                    <Select
+                      fullWidth
+                      variant="standard"
+                      value={selectedAssign}
+                      onChange={handleAssignChange}
+                    >
+                      {assign.map((assign) => (
+                        <MenuItem key={assign.UserId} value={assign.UserId}>
+                          {assign.UserName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    name={column.accessorKey}
+                    onChange={(e) =>
+                      setValues({
+                        ...values,
+                        [e.target.name]: e.target.value,
+                      })
+                    }
+                    sx={{ gridColumn: "span 1" }}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </Box>
+        </form>
+      </DialogContent>
+      <DialogActions sx={{ p: "1.25rem" }}>
+        <Button
+          color="error"
+          onClick={() => {
+            onClose();
+            resetValues();
+          }}
+          variant="contained"
+        >
+          Cancel
+        </Button>
+        <Button color="success" onClick={handleSubmit} variant="contained">
+          Create
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };

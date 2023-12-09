@@ -4,10 +4,11 @@ import { Dashboard, Login, Kanban } from "./pages";
 import { Leads, LeadStatus, Contacts, Complaint } from "./pages/Masters";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RootLayout from "./components/RootLayout";
+import ExampleWithProviders from "./pages/Masters/Example";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/eStockCRM">
       <SnackbarProvider
         maxSnack={1}
         style={{ maxWidth: "400px" }}

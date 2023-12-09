@@ -1,9 +1,10 @@
-import React,{useState} from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logoImage from "../assets/logo.png";
 import chartFillImage from "../assets/Chart_fill.png";
 
-import ratingsImage from "../assets/ratings.png"
+import ratingsImage from "../assets/ratings.png";
+import { MenuOpen,Logout } from "@mui/icons-material";
 
 // import chatImage from "../assets/Chat.png";
 // import userImage from "../assets/User.png";
@@ -13,7 +14,11 @@ import calendarImage from "../assets/Calendar.png";
 // import settingImage from "../assets/Setting.png";
 // import chartImage from "../assets/Chart.png";
 // import controlImage from "../assets/control.png";
-import { ChevronRightIcon, ChevronDownIcon, Bars3Icon } from "@heroicons/react/24/outline";
+import {
+  ChevronRightIcon,
+  ChevronDownIcon,
+  Bars3Icon,
+} from "@heroicons/react/24/outline";
 import useAuthStore from "../zustand/authStore";
 import { useMediaQuery } from "react-responsive";
 
@@ -42,7 +47,7 @@ const Sidebar = () => {
         // { title: "Order Slot Wise", src: ratingsImage },
       ],
     },
-    { title: "Kanban", src: calendarImage}
+    { title: "Kanban", src: calendarImage },
     // { title: "Search", src: searchImage },
     // { title: "Analytics", src: chartImage },
     // { title: "Inbox", src: chatImage },
@@ -64,6 +69,7 @@ const Sidebar = () => {
     navigate(`/${submenuTitle.replace(/\s+/g, "_").toLowerCase()}`);
     setActiveMenu(null);
     setActiveSubmenu(submenuTitle);
+    setSidebarVisible(false);
   };
 
   const handleLogout = () => {
@@ -76,8 +82,11 @@ const Sidebar = () => {
   return (
     <div className="flex">
       {isMobile && (
-        <div onClick={() => setSidebarVisible(!sidebarVisible)}>
-          <Bars3Icon className="h-8 w-8 cursor-pointer top-12 left-7" />
+        <div
+          onClick={() => setSidebarVisible(!sidebarVisible)}
+          className={`fixed top-2 left-2 z-50 ${sidebarVisible ? "ml-72" : ""}`}
+        >
+          <MenuOpen className="h-8 w-8 cursor-pointer animate-pulse" />
         </div>
       )}
       {(!isMobile || sidebarVisible) && (
@@ -162,12 +171,12 @@ const Sidebar = () => {
             ))}
           </ul>
 
-          <div className="absolute bottom-5 left-5">
+          <div className="absolute bottom-5 right-5">
             <button
               onClick={handleLogout}
               className="text-white text-md font-semibold hover:underline"
             >
-              Logout
+              <Logout/> Logout
             </button>
           </div>
         </div>

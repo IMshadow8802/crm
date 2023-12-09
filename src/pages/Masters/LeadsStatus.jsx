@@ -22,14 +22,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Table,TableHead,TableRow,TableCell,TableBody
 } from "@mui/material";
 import {
   Delete,
   Edit,
   FileDownloadOutlined,
   PrintOutlined,
-  AddOutlined,
-  FileUploadOutlined,
 } from "@mui/icons-material";
 import axios from "axios";
 import { useSnackbar } from "notistack";
@@ -37,9 +36,6 @@ import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
 import { Helmet } from "react-helmet";
 import readXlsxFile from "read-excel-file";
-import pdfMake from "pdfmake/build/pdfmake";
-import * as pdfFonts from "pdfmake/build/vfs_fonts";
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 import Papa from "papaparse";
 
 const LeadStatus = () => {
@@ -47,16 +43,36 @@ const LeadStatus = () => {
 
   const columns = [
     {
-        accessorKey: "LeadId",
-        header: "Lead",
-      },
+      accessorKey: "LeadId",
+      header: "Lead",
+    },
+    {
+      accessorKey: "Date",
+      header: "Date",
+    },
     {
       accessorKey: "CompanyName",
       header: "Company Name",
     },
     {
-      accessorKey: "Date",
-      header: "Date",
+      accessorKey: "FlowupDate",
+      header: "Followup Date",
+    },
+    {
+      accessorKey: "Source",
+      header: "Source",
+    },
+    {
+      accessorKey: "Status",
+      header: "Status",
+    },
+    {
+      accessorKey: "AssignTo",
+      header: "Assigned To",
+    },
+    {
+      accessorKey: "Remarks",
+      header: "Remarks",
     },
     {
       accessorKey: "Address",
@@ -87,14 +103,6 @@ const LeadStatus = () => {
       header: "Website",
     },
     {
-      accessorKey: "Source",
-      header: "Source",
-    },
-    {
-      accessorKey: "Status",
-      header: "Status",
-    },
-    {
       accessorKey: "QueryType",
       header: "QueryType",
     },
@@ -110,23 +118,19 @@ const LeadStatus = () => {
       accessorKey: "Rating",
       header: "Rating",
     },
-    {
-      accessorKey: "Remarks",
-      header: "Remarks",
-    },
-    {
-      accessorKey: "AssignTo",
-      header: "Assigned To",
-    },
-    {
-      accessorKey: "FlowupDate",
-      header: "Followup Date",
-    },
   ];
 
   const handleExportData = () => {
     const dataToExport = tableData.map((row) => {
-      const { EnquiryId,BranchId,CompId,CreateUid,EditUid,EditDate, ...rest } = row;
+      const {
+        EnquiryId,
+        BranchId,
+        CompId,
+        CreateUid,
+        EditUid,
+        EditDate,
+        ...rest
+      } = row;
       return rest;
     });
 
@@ -146,64 +150,26 @@ const LeadStatus = () => {
     document.body.removeChild(a);
   };
 
-  const downloadPdf = () => {
-    const docDefinition = {
-      pageOrientation: 'landscape',
-      content: [
-        {
-          text: "ENQUIRY",
-          fontSize: 25,
-          color: "#4285f4",
-          bold: true,
-          alignment: "left",
-          margin: [0, 0, 0, 20],
-        },
-        {
-          table: {
-            headerRows: 1,
-            // widths: ["*", "*", "*", "*", "*", "*", "*", "*", "*", "*", "*"],
-            // Add "*" for each column to distribute the width equally
-            body: [
-              [
-                { text: "Date", style: "tableHeader" },
-                { text: "Name", style: "tableHeader" },
-                { text: "MobileNo", style: "tableHeader" },
-                { text: "EmailId", style: "tableHeader" },
-                { text: "AltMobile", style: "tableHeader" },
-                { text: "Class", style: "tableHeader" },
-                { text: "Subject", style: "tableHeader" },
-                { text: "School", style: "tableHeader" },
-                { text: "Remarks", style: "tableHeader" },
-                { text: "Source", style: "tableHeader" },
-                { text: "RefName", style: "tableHeader" },
-              ],
-              ...tableData.map((item) => [
-                item.Date,
-                item.Name,
-                item.MobileNo,
-                item.EmailId,
-                item.AltMobile,
-                item.ClassId,
-                item.SubjectId,
-                item.School,
-                item.Remarks,
-                item.Source,
-                item.RefName,
-              ]),
-            ],
-          },
-        },
-      ],
-      styles: {
-        tableHeader: {
-          fillColor: "#f2f2f2",
-          bold: true,
-        },
-      },
-    };
-  
-    pdfMake.createPdf(docDefinition).download("Enquiry.pdf");
-  };
+  const downloadPdf = () => {};
+
+  const [detailTableData, setDetailTableData] = useState([]);
+
+  // Function to fetch data for the second table
+  const fetchDetailTableData = useCallback(
+    async (leadId) => {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/Leads/FetchLeads`, {
+          Id: leadId,
+        });
+        console.log(response.data);
+        setDetailTableData(response.data);
+      } catch (error) {
+        console.log(error);
+        enqueueSnackbar("Failed to fetch Lead details", { variant: "error" });
+      }
+    },
+    [setDetailTableData]
+  );
 
   const [tableData, setTableData] = useState([]);
   const fetchData = useCallback(async () => {
@@ -212,7 +178,7 @@ const LeadStatus = () => {
         `${API_BASE_URL}/LeadsStatus/FetchLeadsStatus`,
         { Id: 0 }
       );
-       console.log(response.data)
+      console.log(response.data);
       setTableData(response.data);
     } catch (error) {
       console.log(error);
@@ -223,54 +189,6 @@ const LeadStatus = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const handleDeleteRow = useCallback(
-    async (row) => {
-      console.log(row);
-      enqueueSnackbar(`Are you sure you want to delete this LeadStatus?`, {
-        variant: "warning",
-        persist: true,
-        action: (key) => (
-          <>
-            <Button
-              onClick={() => {
-                deleteItem();
-                closeSnackbar(key);
-              }}
-            >
-              Yes
-            </Button>
-            <Button
-              onClick={() => {
-                closeSnackbar(key);
-              }}
-            >
-              No
-            </Button>
-          </>
-        ),
-      });
-
-      const deleteItem = async () => {
-        try {
-          await axios.post(`${API_BASE_URL}/LeadsStatus/DeleteLeadsStatus`, {
-            Id: row.original.Id,
-          });
-          setTableData((prevState) =>
-            prevState.filter((item) => item.Id !== row.Id)
-          );
-          await fetchData(setTableData);
-          enqueueSnackbar("LeadStatus deleted successfully!", {
-            variant: "success",
-          });
-        } catch (error) {
-          console.log("Error deleting LeadStaus:", error);
-          enqueueSnackbar("Failed to delete LeadStatus!", { variant: "error" });
-        }
-      };
-    },
-    [fetchData, closeSnackbar, enqueueSnackbar]
-  );
 
   const table = useMaterialReactTable({
     columns,
@@ -284,17 +202,6 @@ const LeadStatus = () => {
         maxHeight: "450px",
       },
     },
-
-    renderCreateRowDialogContent: ({ table, row, internalEditComponents }) => (
-      <>
-        <CreateEnquiryModal
-          onClose={() => table.setCreatingRow(null)}
-          fetchData={fetchData}
-          setTableData={setTableData}
-          columns={columns}
-        />
-      </>
-    ),
     renderEditRowDialogContent: ({ table, row, internalEditComponents }) => (
       <EditEnquiryModal
         onClose={() => table.setEditingRow(null)}
@@ -304,16 +211,47 @@ const LeadStatus = () => {
         row={row}
       />
     ),
+    renderDetailPanel: ({ row }) => (
+      <div
+          style={{
+            maxWidth: "1160px",
+            overflowX: "auto",
+            width: "100%",
+            border: "3px solid #ddd",
+            borderRadius: "8px",
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow>
+                {/* Apply styles for bold text and color in TableHead */}
+                <TableCell style={{ fontWeight: "bold", color: "#2196F3" }}>
+                  Date
+                </TableCell>
+                <TableCell style={{ fontWeight: "bold", color: "#2196F3" }}>
+                  Remarks
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {detailTableData.map((detail) => (
+                <TableRow key={detail.id}>
+                  <TableCell>{detail.Date}</TableCell>
+                  <TableCell>{detail.Remarks}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        {useEffect(() => {
+          fetchDetailTableData(row.original.LeadId);
+        }, [row.original.LeadId, fetchDetailTableData])}
+      </div>
+    ),
     renderRowActions: ({ row, table }) => (
       <Box sx={{ display: "flex", gap: "1rem" }}>
-        <Tooltip title="Edit">
+        <Tooltip title="UPDATE STATUS">
           <IconButton color="primary" onClick={() => table.setEditingRow(row)}>
             <Edit />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton color="error" onClick={() => handleDeleteRow(row)}>
-            <Delete />
           </IconButton>
         </Tooltip>
       </Box>
@@ -327,14 +265,6 @@ const LeadStatus = () => {
           flexWrap: "wrap",
         }}
       >
-        <Button
-          color="primary"
-          startIcon={<AddOutlined />}
-          onClick={() => table.setCreatingRow(true)}
-          variant="contained"
-        >
-          Create
-        </Button>
         <Button
           color="primary"
           onClick={handleExportData}
@@ -382,318 +312,6 @@ const LeadStatus = () => {
 };
 
 export default LeadStatus;
-
-export const CreateEnquiryModal = ({
-  onClose,
-  fetchData,
-  setTableData,
-  columns,
-}) => {
-  const [values, setValues] = useState(() =>
-    columns.reduce((acc, column) => {
-      acc[column.accessorKey ?? ""] = "";
-      return acc;
-    }, {})
-  );
-
-  const { enqueueSnackbar } = useSnackbar();
-  const [sources, setSources] = useState([]);
-  const [selectedSource, setSelectedSource] = useState("");
-  const [subject, setSubject] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState("");
-
-  useEffect(() => {
-    const fetchSources = async () => {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Source/FetchSource`,
-          { SourceId: 0 }
-        );
-        setSources(response.data);
-      } catch (error) {
-        console.error("Error fetching sources:", error);
-      }
-    };
-
-    fetchSources();
-  }, []);
-
-  const handleSourceChange = (event) => {
-    setSelectedSource(event.target.value);
-  };
-
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Subject/FetchSubject`,
-          { SubjectId: 0 }
-        );
-        setSubject(response.data);
-      } catch (error) {
-        console.error("Error fetching subject:", error);
-      }
-    };
-
-    fetchSubjects();
-  }, []);
-
-  const handleSubjectChange = (event) => {
-    setSelectedSubject(event.target.value);
-  };
-
-  useEffect(() => {
-    const fetchClass = async () => {
-      try {
-        const response = await axios.post(`${API_BASE_URL}/Class/FetchClass`, {
-          ClassId: 0,
-        });
-        setClasses(response.data);
-      } catch (error) {
-        console.error("Error fetching class:", error);
-      }
-    };
-
-    fetchClass();
-  }, []);
-
-  const handleClassChange = (event) => {
-    setSelectedClass(event.target.value);
-  };
-
-  const handleSubmit = async () => {
-    const requiredFields = ["Name", "MobileNo"]; // Add other required fields here
-
-    const missingFields = requiredFields.filter((field) => !values[field]);
-
-    if (missingFields.length > 0) {
-      missingFields.forEach((field) => {
-        enqueueSnackbar(`${field} is required.`, { variant: "error" });
-      });
-      return; // Do not proceed with submission if fields are missing
-    }
-    const userDataString = localStorage.getItem("userData");
-    if (!userDataString) {
-      enqueueSnackbar("User data not found.", { variant: "error" });
-      return;
-    }
-
-    // Parse userdata array from JSON
-    const userData = JSON.parse(userDataString);
-
-    // Retrieve compid and branchid from the specific object inside userdata array
-    const compid = userData[0]?.CompId; // Assuming compid is in the first object of userdata array
-    const branchid = userData[0]?.BranchId;
-
-    try {
-      const currentDate = new Date();
-      const formattedDate = `${currentDate.getFullYear()}-${(
-        currentDate.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}-${currentDate
-        .getDate()
-        .toString()
-        .padStart(2, "0")}T${currentDate
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${currentDate
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}:${currentDate
-        .getSeconds()
-        .toString()
-        .padStart(2, "0")}`;
-      const updatedValues = {
-        ...values,
-        EnquiryId: 0,
-        BranchId: branchid,
-        CompId: compid,
-        CreateUid: 2,
-        EditUid: 2,
-        EditDate: formattedDate,
-        CreateDate: formattedDate,
-        Source: selectedSource,
-        SubjectId: selectedSubject,
-        ClassId: selectedClass,
-      };
-
-      console.log(updatedValues);
-
-      await axios.post(
-        `${API_BASE_URL}/Enquiry/SaveDataEnquiry`,
-        updatedValues
-      );
-
-      await fetchData(setTableData);
-      enqueueSnackbar("LeadStatus created successfully!", { variant: "success" });
-
-      setValues(() =>
-        columns.reduce((acc, column) => {
-          acc[column.accessorKey ?? ""] = "";
-          return acc;
-        }, {})
-      );
-
-      onClose();
-    } catch (error) {
-      console.log(error);
-      enqueueSnackbar("Failed to create LeadStatus!", { variant: "error" });
-    }
-  };
-
-  const resetValues = () => {
-    setValues(() =>
-      columns.reduce((acc, column) => {
-        acc[column.accessorKey ?? ""] = "";
-        return acc;
-      }, {})
-    );
-    setSelectedSource("");
-    setSelectedSubject("");
-    setSelectedClass("");
-  };
-
-  const theme = useTheme();
-  const isNonMobile = useMediaQuery("(min-width:600px)");
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
-
-  return (
-    <ThemeProvider theme={theme}>
-      <Dialog
-        open={open}
-        fullWidth={true}
-        maxWidth={isSmallScreen ? "xs" : "md"}
-      >
-        <DialogTitle textAlign="center">ADD LEADS STATUS</DialogTitle>
-        <DialogContent>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <Box
-              display="grid"
-              gap="30px"
-              gridTemplateColumns="repeat(4, minmax(0, 1fr))"
-              sx={{
-                "& >div": { gridColumn: isNonMobile ? undefined : "span 4" },
-              }}
-            >
-              {columns.map((column, index) => (
-                <React.Fragment key={index}>
-                  {column.accessorKey === "Date" ? (
-                    <TextField
-                      fullWidth
-                      variant="filled"
-                      //label={column.header}
-                      type="date"
-                      name={column.accessorKey}
-                      value={values[column.accessorKey]}
-                      onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                      sx={{ gridColumn: "span 2" }}
-                    />
-                  ) : column.accessorKey === "SubjectId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedSubject}
-                        onChange={handleSubjectChange}
-                      >
-                        {subject.map((subject) => (
-                          <MenuItem
-                            key={subject.SubjectId}
-                            value={subject.SubjectId}
-                          >
-                            {subject.SubjectName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "ClassId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedClass}
-                        onChange={handleClassChange}
-                      >
-                        {classes.map((classes) => (
-                          <MenuItem
-                            key={classes.ClassId}
-                            value={classes.ClassId}
-                          >
-                            {classes.ClassName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "Source" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedSource}
-                        onChange={handleSourceChange}
-                      >
-                        {sources.map((source) => (
-                          <MenuItem
-                            key={source.SourceId}
-                            value={source.SourceId}
-                          >
-                            {source.Source}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <TextField
-                      fullWidth
-                      variant="filled"
-                      label={column.header}
-                      name={column.accessorKey}
-                      onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [e.target.name]: e.target.value,
-                        })
-                      }
-                      sx={{ gridColumn: "span 2" }}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </Box>
-          </form>
-        </DialogContent>
-        <DialogActions sx={{ p: "1.25rem" }}>
-          <Button
-            color="secondary"
-            onClick={() => {
-              onClose();
-              resetValues();
-            }}
-            variant="outlined"
-          >
-            Cancel
-          </Button>
-          <Button color="secondary" onClick={handleSubmit} variant="contained">
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </ThemeProvider>
-  );
-};
-
-// Import necessary dependencies from MUI and other libraries
 
 export const EditEnquiryModal = ({
   onClose,
@@ -865,7 +483,9 @@ export const EditEnquiryModal = ({
       );
 
       await fetchData(setTableData);
-      enqueueSnackbar("Leads Status updated successfully!", { variant: "success" });
+      enqueueSnackbar("Leads Status updated successfully!", {
+        variant: "success",
+      });
 
       setValues({});
       onClose();
@@ -887,13 +507,17 @@ export const EditEnquiryModal = ({
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
-    <ThemeProvider theme={theme}>
       <Dialog
         open={open}
         fullWidth={true}
         maxWidth={isSmallScreen ? "xs" : "md"}
+        PaperProps={{
+          style: { borderRadius: 10 },
+        }}
       >
-        <DialogTitle textAlign="center">EDIT LEADS STATUS</DialogTitle>
+        <div className="bg-[#3F4FAF] p-4 text-white text-center">
+        <DialogTitle>{values.CompanyName}</DialogTitle>
+      </div>
         <DialogContent>
           <form onSubmit={(e) => e.preventDefault()}>
             <Box
@@ -906,12 +530,16 @@ export const EditEnquiryModal = ({
             >
               {columns.map((column, index) => (
                 <React.Fragment key={index}>
-                  {column.accessorKey === "Date" ? (
+                  {column.accessorKey === "FlowupDate"? (
                     <TextField
                       fullWidth
-                      variant="filled"
+                      variant="standard"
                       type="date"
                       name={column.accessorKey}
+                      label={column.header}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
                       //value={values[column.accessorKey]}
                       value={
                         values[column.accessorKey]
@@ -924,52 +552,15 @@ export const EditEnquiryModal = ({
                           [e.target.name]: e.target.value,
                         })
                       }
-                      sx={{ gridColumn: "span 2" }}
+                      sx={{ gridColumn: "span 1" }}
                     />
-                  ) : column.accessorKey === "SubjectId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
+                  )  :
+                  column.accessorKey === "AssignTo" ? (
+                    <FormControl sx={{ gridColumn: "span 1" }}>
                       <InputLabel>{column.header}</InputLabel>
                       <Select
                         fullWidth
-                        variant="filled"
-                        value={selectedSubject}
-                        onChange={handleSubjectChange}
-                      >
-                        {subject.map((subject) => (
-                          <MenuItem
-                            key={subject.SubjectId}
-                            value={subject.SubjectId}
-                          >
-                            {subject.SubjectName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "ClassId" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
-                        value={selectedClass}
-                        onChange={handleClassChange}
-                      >
-                        {classes.map((classes) => (
-                          <MenuItem
-                            key={classes.ClassId}
-                            value={classes.ClassId}
-                          >
-                            {classes.ClassName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : column.accessorKey === "Source" ? (
-                    <FormControl sx={{ gridColumn: "span 2" }}>
-                      <InputLabel>{column.header}</InputLabel>
-                      <Select
-                        fullWidth
-                        variant="filled"
+                        variant="standard"
                         value={selectedSource}
                         onChange={handleSourceChange}
                       >
@@ -983,10 +574,29 @@ export const EditEnquiryModal = ({
                         ))}
                       </Select>
                     </FormControl>
-                  ) : (
+                  ) : column.accessorKey === "Status" ? (
+                    <FormControl sx={{ gridColumn: "span 1" }}>
+                      <InputLabel>{column.header}</InputLabel>
+                      <Select
+                        fullWidth
+                        variant="standard"
+                        value={selectedSubject}
+                        onChange={handleSubjectChange}
+                      >
+                        {subject.map((subject) => (
+                          <MenuItem
+                            key={subject.SubjectId}
+                            value={subject.SubjectId}
+                          >
+                            {subject.SubjectName}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : column.accessorKey === "Remarks" ? (
                     <TextField
                       fullWidth
-                      variant="filled"
+                      variant="standard"
                       label={column.header}
                       name={column.accessorKey}
                       value={values[column.accessorKey]}
@@ -996,8 +606,10 @@ export const EditEnquiryModal = ({
                           [e.target.name]: e.target.value,
                         })
                       }
-                      sx={{ gridColumn: "span 2" }}
+                      sx={{ gridColumn: "span 4" }}
                     />
+                  ) : (
+                    <></>
                   )}
                 </React.Fragment>
               ))}
@@ -1006,20 +618,19 @@ export const EditEnquiryModal = ({
         </DialogContent>
         <DialogActions sx={{ p: "1.25rem" }}>
           <Button
-            color="secondary"
+            color="error"
             onClick={() => {
               onClose();
               resetValues();
             }}
-            variant="outlined"
+            variant="contained"
           >
             Cancel
           </Button>
-          <Button color="secondary" onClick={handleSubmit} variant="contained">
+          <Button color="success" onClick={handleSubmit} variant="contained">
             Update
           </Button>
         </DialogActions>
       </Dialog>
-    </ThemeProvider>
   );
 };

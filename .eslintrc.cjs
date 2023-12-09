@@ -16,5 +16,9 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    'react/jsx-uses-react': 'off', // Disable warnings about unused react import
+    'react/react-in-jsx-scope': 'off', // Disable warnings about unused react import
+    'react/prop-types': 'off', // Disable warnings about missing prop types
+    'no-unused-vars': 'off',
   },
 }
