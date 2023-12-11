@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { SnackbarProvider } from "notistack";
 import { Dashboard, Login, Kanban } from "./pages";
 import { Leads, LeadStatus, Contacts, Complaint } from "./pages/Masters";
@@ -8,6 +9,7 @@ import ExampleWithProviders from "./pages/Masters/Example";
 
 function App() {
   return (
+    <HelmetProvider>
     <BrowserRouter basename="/eStockCRM">
       <SnackbarProvider
         maxSnack={1}
@@ -49,6 +51,7 @@ function App() {
         </RootLayout>
       </SnackbarProvider>
     </BrowserRouter>
+    </HelmetProvider>
   );
 }
 

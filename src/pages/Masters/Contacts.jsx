@@ -35,9 +35,19 @@ import axios from "axios";
 import { useSnackbar } from "notistack";
 import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import readXlsxFile from "read-excel-file";
 import Papa from "papaparse";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { mkConfig, generateCsv, download } from "export-to-csv";
+
+const csvConfig = mkConfig({
+  fieldSeparator: ",",
+  decimalSeparator: ".",
+  useKeysAsHeaders: true,
+  filename: "Contacts",
+});
 
 const Contacts = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -74,37 +84,43 @@ const Contacts = () => {
   ];
 
   const handleExportData = () => {
-    const dataToExport = tableData.map((row) => {
-      const {
+    const dataWithoutId = tableData.map(
+      ({
         Id,
         BranchId,
         CompId,
         CreateUid,
+        CreateDate,
         Edituid,
         EditDate,
         EditUid,
         ...rest
-      } = row;
-      return rest;
+      }) => rest
+    );
+    const csv = generateCsv(csvConfig)(dataWithoutId);
+    download(csvConfig)(csv);
+  };
+
+  const downloadPdf = () => {
+    // Create a new jsPDF instance
+    const pdf = new jsPDF();
+
+    // Set up the header row in the PDF
+    const headers = columns.map((column) => column.header);
+    const data = tableData.map((row) =>
+      columns.map((column) => row[column.accessorKey])
+    );
+
+    // Add the data to the PDF
+    pdf.autoTable({
+      head: [headers],
+      body: data,
     });
 
-    const csvData = Papa.unparse(dataToExport);
-    downloadCsv(csvData, "Contacts.csv");
+    // Save the PDF with a filename
+    pdf.save("Contacts.pdf");
   };
 
-  const downloadCsv = (csvData, filename) => {
-    const blob = new Blob([csvData], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  };
-
-  const downloadPdf = () => {};
   const handleSaveCell = async (cell, value) => {
     try {
       // Extract the relevant data
@@ -138,7 +154,7 @@ const Contacts = () => {
         `${API_BASE_URL}/Contact/FetchContactDetails`,
         { Id: 0 }
       );
-      console.log(response.data);
+      //console.log(response.data);
       setTableData(response.data);
     } catch (error) {
       console.log(error);
@@ -315,6 +331,51 @@ export const CreateEnquiryModal = ({
 
   const { enqueueSnackbar } = useSnackbar();
 
+  const validateField = (name, value) => {
+    if (!value) {
+      return `${name} is required.`;
+    }
+
+    if (name === "Mobile") {
+      const regex = /^\d{10}$/;
+      return regex.test(value) ? "" : "Mobile No should be a 10-digit number.";
+    }
+
+    if (name === "Phone") {
+      const numericRegex = /^[0-9]+$/;
+      return numericRegex.test(value) ? "" : "Phone should contain only numeric characters.";
+    }
+
+    if (name === "Email") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(value) ? "" : "Please enter a valid email address.";
+    }
+
+    return "";
+  };
+
+  const [errors, setErrors] = useState({});
+  //console.log(errors);
+
+  const handleFieldChange = (name, value) => {
+    setValues({
+      ...values,
+      [name]: value,
+    });
+    setErrors({
+      ...errors,
+      [name]: "",
+    });
+  };
+
+  const handleFieldBlur = (name) => {
+    const error = validateField(name, values[name]);
+    setErrors({
+      ...errors,
+      [name]: error,
+    });
+  };
+
   const handleSubmit = async () => {
     const requiredFields = [
       "Name",
@@ -323,16 +384,24 @@ export const CreateEnquiryModal = ({
       "Address",
       "Email",
       "Remarks",
-    ]; // Add other required fields here
+    ];
 
-    const missingFields = requiredFields.filter((field) => !values[field]);
+    const formErrors = {};
+    requiredFields.forEach((field) => {
+      const error = validateField(field, values[field]);
+      if (error) {
+        formErrors[field] = error;
+      }
+    });
 
-    if (missingFields.length > 0) {
-      missingFields.forEach((field) => {
-        enqueueSnackbar(`${field} is required.`, { variant: "error" });
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      enqueueSnackbar("Please fill in all required fields.", {
+        variant: "error",
       });
-      return; // Do not proceed with submission if fields are missing
+      return;
     }
+
     const userDataString = localStorage.getItem("userData");
     if (!userDataString) {
       enqueueSnackbar("User data not found.", { variant: "error" });
@@ -343,7 +412,7 @@ export const CreateEnquiryModal = ({
     const userData = JSON.parse(userDataString);
 
     // Retrieve compid and branchid from the specific object inside userdata array
-    const compid = userData[0]?.CompId; // Assuming compid is in the first object of userdata array
+    const compid = userData[0]?.CompId;
     const branchid = userData[0]?.BranchId;
 
     try {
@@ -376,7 +445,7 @@ export const CreateEnquiryModal = ({
         CreateDate: formattedDate,
       };
 
-      console.log(updatedValues);
+      //console.log(updatedValues);
 
       await axios.post(
         `${API_BASE_URL}/Contact/SaveContactDetails`,
@@ -438,11 +507,11 @@ export const CreateEnquiryModal = ({
                   label={column.header}
                   name={column.accessorKey}
                   onChange={(e) =>
-                    setValues({
-                      ...values,
-                      [e.target.name]: e.target.value,
-                    })
+                    handleFieldChange(column.accessorKey, e.target.value)
                   }
+                  onBlur={() => handleFieldBlur(column.accessorKey)}
+                  helperText={errors[column.accessorKey]}
+                  error={Boolean(errors[column.accessorKey])}
                   sx={{ gridColumn: "span 2" }}
                 />
               </React.Fragment>

@@ -35,9 +35,19 @@ import axios from "axios";
 import { useSnackbar } from "notistack";
 import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import readXlsxFile from "read-excel-file";
 import Papa from "papaparse";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { mkConfig, generateCsv, download } from "export-to-csv";
+
+const csvConfig = mkConfig({
+  fieldSeparator: ",",
+  decimalSeparator: ".",
+  useKeysAsHeaders: true,
+  filename:"Leads"
+});
 
 const Leads = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -45,6 +55,8 @@ const Leads = () => {
   const [query, setQuery] = useState([]);
   const [status, setStatus] = useState([]);
   const [assign, setAssign] = useState([]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const columns = [
     {
@@ -198,29 +210,36 @@ const Leads = () => {
   }, []);
 
   const handleExportData = () => {
-    const dataToExport = tableData.map((row) => {
-      const { Id, BranchId, CompId, CreateUid, EditUid, EditDate, ...rest } =
-        row;
-      return rest;
+    const dataWithoutId = tableData.map(({ Id,
+      BranchId,
+      CompId,
+      CreatedUid,
+      CreatedDate,
+      Edituid,
+      EditDate,
+      EditUid,
+      ...rest}) => rest);
+    const csv = generateCsv(csvConfig)(dataWithoutId);
+    download(csvConfig)(csv);
+  };
+
+  const downloadPdf = () => {
+    // Create a new jsPDF instance
+    const pdf = new jsPDF({ orientation: "landscape" });
+  
+    // Set up the header row in the PDF
+    const headers = columns.map((column) => column.header);
+    const data = tableData.map((row) => columns.map((column) => row[column.accessorKey]));
+  
+    // Add the data to the PDF
+    pdf.autoTable({
+      head: [headers],
+      body: data,
     });
-
-    const csvData = Papa.unparse(dataToExport);
-    downloadCsv(csvData, "Leads.csv");
+  
+    // Save the PDF with a filename
+    pdf.save("Leads.pdf");
   };
-
-  const downloadCsv = (csvData, filename) => {
-    const blob = new Blob([csvData], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  };
-
-  const downloadPdf = () => {};
 
   function formatDates(originalData) {
     // Create a new object to avoid modifying the original data
@@ -304,11 +323,24 @@ const Leads = () => {
     }
   };
 
+  const handleStartDateChange = (event) => {
+    setStartDate(event.target.value);
+  };
+
+  const handleEndDateChange = (event) => {
+    setEndDate(event.target.value);
+  };
+
   const [tableData, setTableData] = useState([]);
+
   const fetchData = useCallback(async () => {
+    const formattedStartDate = startDate ? new Date(startDate).toISOString().split('T')[0] : '';
+    const formattedEndDate = endDate ? new Date(endDate).toISOString().split('T')[0] : '';
     try {
       const response = await axios.post(`${API_BASE_URL}/Leads/FetchLeads`, {
         Id: 0,
+        StartDate: formattedStartDate,
+        EndDate: formattedEndDate,
       });
       //console.log(response.data)
       setTableData(response.data);
@@ -316,7 +348,7 @@ const Leads = () => {
       console.log(error);
       enqueueSnackbar("Failed to fetch Leads", { variant: "error" });
     }
-  }, [setTableData]);
+  }, [startDate, endDate, setTableData]);
 
   useEffect(() => {
     fetchData();
@@ -350,6 +382,7 @@ const Leads = () => {
       });
 
       const deleteItem = async () => {
+        setCurrentRowData(null);
         try {
           await axios.post(`${API_BASE_URL}/Leads/DeleteLeads`, {
             Id: row.original.Id,
@@ -415,11 +448,29 @@ const Leads = () => {
       <Box
         sx={{
           display: "flex",
-          gap: "1rem",
+          gap: "0.9rem",
           p: "0.5rem",
           flexWrap: "wrap",
         }}
       >
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-bold">Start Date:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={handleStartDateChange}
+              className="border border-black rounded p-2 shadow-lg"
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-bold">End Date:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={handleEndDateChange}
+              className="border border-black rounded p-2 shadow-lg"
+            />
+          </div>
         <Button
           color="primary"
           startIcon={<AddOutlined />}
@@ -434,7 +485,7 @@ const Leads = () => {
           startIcon={<FileDownloadOutlined />}
           variant="contained"
         >
-          Export All Data
+          EXPORT CSV
         </Button>
         <Button
           color="error"
@@ -442,7 +493,7 @@ const Leads = () => {
           startIcon={<PrintOutlined />}
           variant="contained"
         >
-          Print as PDF
+          PRINT PDF
         </Button>
       </Box>
     ),
@@ -520,38 +571,72 @@ export const CreateEnquiryModal = ({
   }); 
 
   const { enqueueSnackbar } = useSnackbar();
-  const [selectedSource, setSelectedSource] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [selectedQuery, setSelectedQuery] = useState("");
-  const [selectedAssign, setSelectedAssign] = useState("");
 
-  const handleSourceChange = (event) => {
-    setSelectedSource(event.target.value);
+  const validateField = (name, value) => {
+    if (!value) {
+      return `${name} is required.`;
+    }
+
+    if (name === "MobileNo") {
+      const regex = /^\d{10}$/;
+      return regex.test(value) ? "" : "Mobile No should be a 10-digit number.";
+    }
+
+    if (name === "Phone"||name==="Rating"||name==="NoOfEmp"||name==="AnnualRevenue") {
+      const numericRegex = /^[0-9]+$/;
+      return numericRegex.test(value) ? "" : "Only numeric characters are allowed.";
+    }
+
+    if (name === "Email") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(value) ? "" : "Please enter a valid email address.";
+    }
+
+    return "";
   };
 
-  const handleStatusChange = (event) => {
-    setSelectedStatus(event.target.value);
+
+  const [errors, setErrors] = useState({});
+  console.log(errors);
+
+  const handleFieldChange = (name, value) => {
+    setValues({
+      ...values,
+      [name]: value,
+    });
+    setErrors({
+      ...errors,
+      [name]: "",
+    });
   };
 
-  const handleQueryChange = (event) => {
-    setSelectedQuery(event.target.value);
-  };
-
-  const handleAssignChange = (event) => {
-    setSelectedAssign(event.target.value);
+  const handleFieldBlur = (name) => {
+    const error = validateField(name, values[name]);
+    setErrors({
+      ...errors,
+      [name]: error,
+    });
   };
 
   const handleSubmit = async () => {
-    const requiredFields = ["Name", "MobileNo"]; // Add other required fields here
+    const requiredFields = ["CompanyName", "Address","Phone","Name","Title","Email","MobileNo","Website","Source","Status","QueryType","AssignTo","NoOfEmp","AnnualRevenue","Rating","Remarks"];
 
-    const missingFields = requiredFields.filter((field) => !values[field]);
+    const formErrors = {};
+    requiredFields.forEach((field) => {
+      const error = validateField(field, values[field]);
+      if (error) {
+        formErrors[field] = error;
+      }
+    });
 
-    if (missingFields.length > 0) {
-      missingFields.forEach((field) => {
-        enqueueSnackbar(`${field} is required.`, { variant: "error" });
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      enqueueSnackbar("Please fill in all required fields.", {
+        variant: "error",
       });
-      return; // Do not proceed with submission if fields are missing
+      return;
     }
+
     const userDataString = localStorage.getItem("userData");
     if (!userDataString) {
       enqueueSnackbar("User data not found.", { variant: "error" });
@@ -593,10 +678,6 @@ export const CreateEnquiryModal = ({
         EditUid: 2,
         EditDate: formattedDate,
         CreatedDate: formattedDate,
-        Source: selectedSource,
-        Status: selectedStatus,
-        QueryType: selectedQuery,
-        AssignTo: selectedAssign,
       };
 
       console.log(updatedValues);
@@ -622,10 +703,6 @@ export const CreateEnquiryModal = ({
         return acc;
       }, {})
     );
-    setSelectedSource("");
-    setSelectedStatus("");
-    setSelectedQuery("");
-    setSelectedAssign("");
   };
 
   const theme = useTheme();
@@ -677,69 +754,85 @@ export const CreateEnquiryModal = ({
                     sx={{ gridColumn: "span 1" }}
                   />
                 ) : column.accessorKey === "Status" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedStatus}
-                      onChange={handleStatusChange}
-                    >
-                      {status.map((stat) => (
-                        <MenuItem key={stat.Id} value={stat.Id}>
-                          {stat.Status}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {status.map((stat) => (
+                      <MenuItem key={stat.Id} value={stat.Id}>
+                        {stat.Status}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 ) : column.accessorKey === "QueryType" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedQuery}
-                      onChange={handleQueryChange}
-                    >
-                      {query.map((qu) => (
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {query.map((qu) => (
                         <MenuItem key={qu.Id} value={qu.Id}>
                           {qu.QueryType}
                         </MenuItem>
                       ))}
-                    </Select>
-                  </FormControl>
+                  </TextField>
                 ) : column.accessorKey === "Source" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedSource}
-                      onChange={handleSourceChange}
-                    >
-                      {sources.map((source) => (
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {sources.map((source) => (
                         <MenuItem key={source.Id} value={source.Id}>
                           {source.SourceName}
                         </MenuItem>
                       ))}
-                    </Select>
-                  </FormControl>
+                  </TextField>
                 ) : column.accessorKey === "AssignTo" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedAssign}
-                      onChange={handleAssignChange}
-                    >
-                      {assign.map((assign) => (
-                        <MenuItem key={assign.UserId} value={assign.UserId}>
-                          {assign.UserName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {assign.map((assign) => (
+                      <MenuItem key={assign.UserId} value={assign.UserId}>
+                        {assign.UserName}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 ) : (
                   <TextField
                     fullWidth
@@ -747,11 +840,11 @@ export const CreateEnquiryModal = ({
                     label={column.header}
                     name={column.accessorKey}
                     onChange={(e) =>
-                      setValues({
-                        ...values,
-                        [e.target.name]: e.target.value,
-                      })
+                      handleFieldChange(column.accessorKey, e.target.value)
                     }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
                     sx={{ gridColumn: "span 1" }}
                   />
                 )}

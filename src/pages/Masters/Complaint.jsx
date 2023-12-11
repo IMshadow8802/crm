@@ -17,11 +17,8 @@ import {
   useMediaQuery,
   useTheme,
   ThemeProvider,
-  Select,
   TextField,
   MenuItem,
-  FormControl,
-  InputLabel,
 } from "@mui/material";
 import {
   Delete,
@@ -35,15 +32,70 @@ import axios from "axios";
 import { useSnackbar } from "notistack";
 import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
-import { Helmet } from "react-helmet";
-import readXlsxFile from "read-excel-file";
-import Papa from "papaparse";
+import { Helmet } from "react-helmet-async";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { mkConfig, generateCsv, download } from "export-to-csv";
+
+const csvConfig = mkConfig({
+  fieldSeparator: ",",
+  decimalSeparator: ".",
+  useKeysAsHeaders: true,
+  filename: "Complaint",
+});
 
 const Complaint = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [status, setStatus] = useState([]);
   const [assign, setAssign] = useState([]);
   const [ctype, setCtype] = useState([]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const columns = [
+    {
+      accessorKey: "Date",
+      header: "Date",
+    },
+    {
+      accessorKey: "ComplainType",
+      header: "Complaint Type",
+      editVariant: "select",
+      editSelectOptions: ctype.map((ct) => ct.ComplainType),
+    },
+    {
+      accessorKey: "CustomerName",
+      header: "Customer Name",
+    },
+    {
+      accessorKey: "ContactName",
+      header: "Contact Name",
+    },
+    {
+      accessorKey: "ContactNo",
+      header: "Contact No",
+    },
+    {
+      accessorKey: "Address",
+      header: "Address",
+    },
+    {
+      accessorKey: "Complain",
+      header: "Complain",
+    },
+    {
+      accessorKey: "Assign",
+      header: "Assigned To",
+      editVariant: "select",
+      editSelectOptions: assign.map((assignedTo) => assignedTo.UserName),
+    },
+    {
+      accessorKey: "Status",
+      header: "Status",
+      editVariant: "select",
+      editSelectOptions: status.map((status) => status.Status),
+    },
+  ];
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -99,87 +151,43 @@ const Complaint = () => {
     fetchAssign();
   }, []);
 
-  const columns = [
-    {
-      accessorKey: "Date",
-      header: "Date",
-    },
-    // {
-    //   accessorKey: "ComplainNo",
-    //   header: "Complain No",
-    // },
-    {
-      accessorKey: "ComplainType",
-      header: "Complaint Type",
-      editVariant: "select",
-      editSelectOptions: ctype.map((ct) => ct.ComplainType),
-    },
-    {
-      accessorKey: "CustomerName",
-      header: "Customer Name",
-    },
-    {
-      accessorKey: "ContactName",
-      header: "Contact Name",
-    },
-    {
-      accessorKey: "ContactNo",
-      header: "Contact No",
-    },
-    {
-      accessorKey: "Address",
-      header: "Address",
-    },
-    {
-      accessorKey: "Complain",
-      header: "Complain",
-    },
-    {
-      accessorKey: "Assign",
-      header: "Assigned To",
-      editVariant: "select",
-      editSelectOptions: assign.map((assignedTo) => assignedTo.UserName),
-    },
-    {
-      accessorKey: "Status",
-      header: "Status",
-      editVariant: "select",
-      editSelectOptions: status.map((status) => status.Status),
-    },
-  ];
-
   const handleExportData = () => {
-    const dataToExport = tableData.map((row) => {
-      const {
+    const dataWithoutId = tableData.map(
+      ({
         Id,
         BranchId,
         CompId,
         CreateUid,
+        CreateDate,
         Edituid,
         EditDate,
         EditUid,
         ...rest
-      } = row;
-      return rest;
+      }) => rest
+    );
+    const csv = generateCsv(csvConfig)(dataWithoutId);
+    download(csvConfig)(csv);
+  };
+
+  const downloadPdf = () => {
+    // Create a new jsPDF instance
+    const pdf = new jsPDF();
+
+    // Set up the header row in the PDF
+    const headers = columns.map((column) => column.header);
+    const data = tableData.map((row) =>
+      columns.map((column) => row[column.accessorKey])
+    );
+
+    // Add the data to the PDF
+    pdf.autoTable({
+      head: [headers],
+      body: data,
     });
 
-    const csvData = Papa.unparse(dataToExport);
-    downloadCsv(csvData, "Complaint.csv");
+    // Save the PDF with a filename
+    pdf.save("Complaints.pdf");
   };
-
-  const downloadCsv = (csvData, filename) => {
-    const blob = new Blob([csvData], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  };
-
-  const downloadPdf = () => {};
 
   function formatDates(originalData) {
     // Create a new object to avoid modifying the original data
@@ -232,7 +240,7 @@ const Complaint = () => {
           ...formatDates(updatedRow),
           Status: statusId,
           Assign: assignToId,
-          ComplainType:cTypeId
+          ComplainType: cTypeId,
         };
 
         console.log(formattedData);
@@ -257,12 +265,26 @@ const Complaint = () => {
     }
   };
 
+  const handleStartDateChange = (event) => {
+    setStartDate(event.target.value);
+  };
+
+  const handleEndDateChange = (event) => {
+    setEndDate(event.target.value);
+  };
+
   const [tableData, setTableData] = useState([]);
   const fetchData = useCallback(async () => {
+    const formattedStartDate = startDate
+      ? new Date(startDate).toISOString().split("T")[0]
+      : "";
+    const formattedEndDate = endDate
+      ? new Date(endDate).toISOString().split("T")[0]
+      : "";
     try {
       const response = await axios.post(
         `${API_BASE_URL}/Complain/FetchComplainRegister`,
-        { Id: 0 }
+        { Id: 0, StartDate: formattedStartDate, EndDate: formattedEndDate }
       );
       //console.log(response.data);
       setTableData(response.data);
@@ -270,7 +292,7 @@ const Complaint = () => {
       console.log(error);
       enqueueSnackbar("Failed to fetch Complaint", { variant: "error" });
     }
-  }, [setTableData]);
+  }, [startDate, endDate, setTableData]);
 
   useEffect(() => {
     fetchData();
@@ -304,6 +326,7 @@ const Complaint = () => {
       });
 
       const deleteItem = async () => {
+        setCurrentRowData(null);
         try {
           await axios.post(`${API_BASE_URL}/Leads/DeleteLeads`, {
             Id: row.original.Id,
@@ -368,11 +391,29 @@ const Complaint = () => {
       <Box
         sx={{
           display: "flex",
-          gap: "1rem",
+          gap: "0.9rem",
           p: "0.5rem",
           flexWrap: "wrap",
         }}
       >
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-bold">Start Date:</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={handleStartDateChange}
+            className="border border-black rounded p-2 shadow-lg"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-bold">End Date:</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={handleEndDateChange}
+            className="border border-black rounded p-2 shadow-lg"
+          />
+        </div>
         <Button
           color="primary"
           startIcon={<AddOutlined />}
@@ -387,7 +428,7 @@ const Complaint = () => {
           startIcon={<FileDownloadOutlined />}
           variant="contained"
         >
-          Export All Data
+          Export CSV
         </Button>
         <Button
           color="error"
@@ -395,7 +436,7 @@ const Complaint = () => {
           startIcon={<PrintOutlined />}
           variant="contained"
         >
-          Print as PDF
+          Print PDF
         </Button>
       </Box>
     ),
@@ -454,14 +495,16 @@ export const CreateEnquiryModal = ({
   columns,
   status,
   assign,
-  ctype
+  ctype,
 }) => {
   const [values, setValues] = useState(() => {
     const currentDate = new Date();
-    const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1)
+    const formattedDate = `${currentDate.getFullYear()}-${(
+      currentDate.getMonth() + 1
+    )
       .toString()
       .padStart(2, "0")}-${currentDate.getDate().toString().padStart(2, "0")}`;
-  
+
     return {
       ...columns.reduce((acc, column) => {
         acc[column.accessorKey ?? ""] = "";
@@ -469,36 +512,79 @@ export const CreateEnquiryModal = ({
       }, {}),
       Date: formattedDate,
     };
-  });  
+  });
+
+//  console.log(values);
+
+  const validateContactNo = (value) => {
+    const regex = /^\d{10}$/;
+
+    if (!value) {
+      return "ContactNo is required.";
+    } else if (!regex.test(value)) {
+      return "ContactNo should be a 10-digit number.";
+    }
+
+    return "";
+  };
+
+  const [errors, setErrors] = useState({});
+  console.log(errors);
+
+  const handleFieldChange = (name, value) => {
+    setValues({
+      ...values,
+      [name]: value,
+    });
+    setErrors({
+      ...errors,
+      [name]: "",
+    });
+  };
+
+  const handleFieldBlur = (name) => {
+    let error = "";
+    if (!values[name]) {
+      error = `${name} is required.`;
+    } else if (name === "ContactNo") {
+      error = validateContactNo(values[name]);
+    }
+    setErrors({
+      ...errors,
+      [name]: error,
+    });
+  };
 
   const { enqueueSnackbar } = useSnackbar();
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [selectedAssign, setSelectedAssign] = useState("");
-  const [selectedCType, setSelectedCType] = useState("");
 
-  const handleStatusChange = (event) => {
-    setSelectedStatus(event.target.value);
-  };
-
-  const handleAssignChange = (event) => {
-    setSelectedAssign(event.target.value);
-  };
-
-  const handleCTypeChange = (event) => {
-    setSelectedCType(event.target.value);
-  };
 
   const handleSubmit = async () => {
-    const requiredFields = ["CustomerName", "ContactNo"];
+    const requiredFields = [
+      "CustomerName",
+      "ContactNo",
+      "ComplainType",
+      "ContactName",
+      "Address",
+      "Complain",
+      "Assign",
+      "Status",
+    ];
 
-    const missingFields = requiredFields.filter((field) => !values[field]);
+    const formErrors = {};
+    requiredFields.forEach((field) => {
+      if (!values[field]) {
+        formErrors[field] = `${field} is required.`;
+      }
+    });
 
-    if (missingFields.length > 0) {
-      missingFields.forEach((field) => {
-        enqueueSnackbar(`${field} is required.`, { variant: "error" });
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      enqueueSnackbar("Please fill in all required fields.", {
+        variant: "error",
       });
       return;
     }
+
     const userDataString = localStorage.getItem("userData");
     if (!userDataString) {
       enqueueSnackbar("User data not found.", { variant: "error" });
@@ -534,16 +620,13 @@ export const CreateEnquiryModal = ({
       const updatedValues = {
         ...values,
         Id: 0,
-        ComplainNo:0,
+        ComplainNo: 0,
         BranchId: branchid,
         CompId: compid,
         CreateUid: 2,
         EditUid: 2,
         EditDate: formattedDate,
         CreateDate: formattedDate,
-        Status: selectedStatus,
-        Assign: selectedAssign,
-        ComplainType:selectedCType
       };
 
       console.log(updatedValues);
@@ -574,9 +657,6 @@ export const CreateEnquiryModal = ({
         return acc;
       }, {})
     );
-    setSelectedStatus("");
-    setSelectedAssign("");
-    setSelectedCType("");
   };
 
   const theme = useTheme();
@@ -626,54 +706,66 @@ export const CreateEnquiryModal = ({
                     }
                     sx={{ gridColumn: "span 1" }}
                   />
-                ): column.accessorKey === "ComplainType" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedCType}
-                      onChange={handleCTypeChange}
-                    >
-                      {ctype.map((ct) => (
-                        <MenuItem key={ct.Id} value={ct.Id}>
-                          {ct.ComplainType}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )  : column.accessorKey === "Status" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedStatus}
-                      onChange={handleStatusChange}
-                    >
-                      {status.map((stat) => (
-                        <MenuItem key={stat.Id} value={stat.Id}>
-                          {stat.Status}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                ) : column.accessorKey === "ComplainType" ? (
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {ctype.map((ct) => (
+                      <MenuItem key={ct.Id} value={ct.Id}>
+                        {ct.ComplainType}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : column.accessorKey === "Status" ? (
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {status.map((stat) => (
+                      <MenuItem key={stat.Id} value={stat.Id}>
+                        {stat.Status}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 ) : column.accessorKey === "Assign" ? (
-                  <FormControl sx={{ gridColumn: "span 1" }}>
-                    <InputLabel>{column.header}</InputLabel>
-                    <Select
-                      fullWidth
-                      variant="standard"
-                      value={selectedAssign}
-                      onChange={handleAssignChange}
-                    >
-                      {assign.map((assign) => (
-                        <MenuItem key={assign.UserId} value={assign.UserId}>
-                          {assign.UserName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    label={column.header}
+                    select
+                    onChange={(e) =>
+                      handleFieldChange(column.accessorKey, e.target.value)
+                    }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
+                    sx={{ gridColumn: "span 1" }}
+                  >
+                    {assign.map((assign) => (
+                      <MenuItem key={assign.UserId} value={assign.UserId}>
+                        {assign.UserName}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 ) : (
                   <TextField
                     fullWidth
@@ -681,11 +773,11 @@ export const CreateEnquiryModal = ({
                     label={column.header}
                     name={column.accessorKey}
                     onChange={(e) =>
-                      setValues({
-                        ...values,
-                        [e.target.name]: e.target.value,
-                      })
+                      handleFieldChange(column.accessorKey, e.target.value)
                     }
+                    onBlur={() => handleFieldBlur(column.accessorKey)}
+                    helperText={errors[column.accessorKey]}
+                    error={Boolean(errors[column.accessorKey])}
                     sx={{ gridColumn: "span 1" }}
                   />
                 )}

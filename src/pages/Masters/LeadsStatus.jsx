@@ -34,12 +34,12 @@ import axios from "axios";
 import { useSnackbar } from "notistack";
 import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
-import { Helmet } from "react-helmet";
-import readXlsxFile from "read-excel-file";
-import Papa from "papaparse";
+import { Helmet } from "react-helmet-async";
 
 const LeadStatus = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const columns = [
     {
@@ -171,8 +171,19 @@ const LeadStatus = () => {
     [setDetailTableData]
   );
 
+  const handleStartDateChange = (event) => {
+    setStartDate(event.target.value);
+  };
+
+  const handleEndDateChange = (event) => {
+    setEndDate(event.target.value);
+  };
+
   const [tableData, setTableData] = useState([]);
+
   const fetchData = useCallback(async () => {
+    const formattedStartDate = startDate ? new Date(startDate).toISOString().split('T')[0] : '';
+    const formattedEndDate = endDate ? new Date(endDate).toISOString().split('T')[0] : '';
     try {
       const response = await axios.post(
         `${API_BASE_URL}/LeadsStatus/FetchLeadsStatus`,
@@ -184,7 +195,7 @@ const LeadStatus = () => {
       console.log(error);
       enqueueSnackbar("Failed to fetch Leadstaus", { variant: "error" });
     }
-  }, [setTableData]);
+  }, [startDate, endDate, setTableData]);
 
   useEffect(() => {
     fetchData();
@@ -265,6 +276,24 @@ const LeadStatus = () => {
           flexWrap: "wrap",
         }}
       >
+                <div className="flex items-center space-x-2">
+          <label className="text-sm font-bold">Start Date:</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={handleStartDateChange}
+            className="border border-black rounded p-2 shadow-lg"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-bold">End Date:</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={handleEndDateChange}
+            className="border border-black rounded p-2 shadow-lg"
+          />
+        </div>
         <Button
           color="primary"
           onClick={handleExportData}
