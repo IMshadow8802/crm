@@ -224,6 +224,34 @@ const Complaint = () => {
           ...currentRow.original,
           ...currentRowData,
         };
+        // Validate ContactNo
+        const contactNo = updatedRow.ContactNo.toString(); // Convert to string
+        const contactNoValidation = /^[0-9]{10}$/;
+        if (!contactNoValidation.test(contactNo)) {
+          enqueueSnackbar(
+            "Invalid ContactNo. It should be a 10-digit number.",
+            {
+              variant: "error",
+            }
+          );
+          return;
+        }
+
+        const requiredFields = ["ComplainType", "Assign", "Status"];
+        const missingFields = requiredFields.filter(
+          (field) => !updatedRow[field]
+        );
+
+        if (missingFields.length > 0) {
+          enqueueSnackbar(
+            `The following fields are required: ${missingFields.join(", ")}`,
+            {
+              variant: "error",
+            }
+          );
+          return;
+        }
+
         const statusId = status.find(
           (status) => status.Status === updatedRow.Status
         )?.Id;
@@ -244,6 +272,7 @@ const Complaint = () => {
         };
 
         console.log(formattedData);
+
         await axios.post(
           `${API_BASE_URL}/Complain/SaveComplainRegister`,
           formattedData
@@ -514,17 +543,14 @@ export const CreateEnquiryModal = ({
     };
   });
 
-//  console.log(values);
-
-  const validateContactNo = (value) => {
-    const regex = /^\d{10}$/;
-
+  const validateField = (name, value) => {
     if (!value) {
-      return "ContactNo is required.";
-    } else if (!regex.test(value)) {
-      return "ContactNo should be a 10-digit number.";
+      return `${name} is required.`;
     }
-
+    if (name === "ContactNo") {
+      const regex = /^\d{10}$/;
+      return regex.test(value) ? "" : "Contact No should be a 10-digit number.";
+    }
     return "";
   };
 
@@ -543,12 +569,7 @@ export const CreateEnquiryModal = ({
   };
 
   const handleFieldBlur = (name) => {
-    let error = "";
-    if (!values[name]) {
-      error = `${name} is required.`;
-    } else if (name === "ContactNo") {
-      error = validateContactNo(values[name]);
-    }
+    const error = validateField(name, values[name]);
     setErrors({
       ...errors,
       [name]: error,
@@ -556,7 +577,6 @@ export const CreateEnquiryModal = ({
   };
 
   const { enqueueSnackbar } = useSnackbar();
-
 
   const handleSubmit = async () => {
     const requiredFields = [
@@ -572,8 +592,9 @@ export const CreateEnquiryModal = ({
 
     const formErrors = {};
     requiredFields.forEach((field) => {
-      if (!values[field]) {
-        formErrors[field] = `${field} is required.`;
+      const error = validateField(field, values[field]);
+      if (error) {
+        formErrors[field] = error;
       }
     });
 

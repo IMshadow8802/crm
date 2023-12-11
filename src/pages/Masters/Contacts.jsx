@@ -129,9 +129,44 @@ const Contacts = () => {
       console.log(originalData);
       const accessorKey = column.id;
 
+      if (accessorKey === "Email") {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailValidation = emailRegex.test(value)
+          ? ""
+          : "Please enter a valid email address.";
+
+        if (emailValidation) {
+          // If validation fails, show an error message
+          enqueueSnackbar(emailValidation, { variant: "error" });
+          return;
+        }
+      } else if (accessorKey === "Mobile") {
+        const numericRegex = /^[0-9]+$/;
+        const mobileValidation = numericRegex.test(value) && value.length === 10
+          ? ""
+          : "Mobile No should be a numeric 10-digit number.";
+
+        if (mobileValidation) {
+          // If validation fails, show an error message
+          enqueueSnackbar(mobileValidation, { variant: "error" });
+          return;
+        }
+      } else if (accessorKey === "Phone") {
+        const numericRegex = /^[0-9]+$/;
+        const phoneValidation = numericRegex.test(value)
+          ? ""
+          : "Phone should contain only numeric characters.";
+
+        if (phoneValidation) {
+          // If validation fails, show an error message
+          enqueueSnackbar(phoneValidation, { variant: "error" });
+          return;
+        }
+      }
+
       // Update the original data with the new value
       originalData[accessorKey] = value;
-      console.log(originalData);
+      //console.log(originalData);
 
       await axios.post(
         `${API_BASE_URL}/Contact/SaveContactDetails`,

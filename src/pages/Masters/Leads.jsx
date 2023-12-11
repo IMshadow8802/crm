@@ -282,6 +282,54 @@ const Leads = () => {
           ...currentRowData,
         };
 
+        //console.log(updatedRow)
+  
+        // Validate Phone
+        const phone = updatedRow.Phone.toString(); // Convert to string
+        const phoneValidation = /^\d+$/;
+        if (!phoneValidation.test(phone)) {
+          enqueueSnackbar('Invalid Phone. It should be numeric.', {
+            variant: 'error',
+          });
+          return;
+        }
+  
+        // Validate Mobile
+        const mobile = updatedRow.MobileNo.toString(); // Convert to string
+        const mobileValidation = /^\d{10}$/;
+        if (!mobileValidation.test(mobile)) {
+          enqueueSnackbar('Invalid Mobile. It should be a 10-digit number.', {
+            variant: 'error',
+          });
+          return;
+        }
+  
+        // Validate Email
+        const email = updatedRow.Email.toString(); // Convert to string
+        const emailValidation = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailValidation.test(email)) {
+          enqueueSnackbar('Invalid Email. Please enter a valid email address.', {
+            variant: 'error',
+          });
+          return;
+        }
+  
+        // Validate required fields
+        const requiredFields = ['Source', 'Status', 'QueryType', 'AssignTo'];
+        const missingFields = requiredFields.filter(
+          (field) => !updatedRow[field]
+        );
+  
+        if (missingFields.length > 0) {
+          enqueueSnackbar(
+            `The following fields are required: ${missingFields.join(', ')}`,
+            {
+              variant: 'error',
+            }
+          );
+          return;
+        }
+  
         // Retrieve the IDs for Source, Status, QueryType, and AssignTo from updatedRow
         const sourceId = sources.find(
           (source) => source.SourceName === updatedRow.Source
@@ -295,7 +343,7 @@ const Leads = () => {
         const assignToId = assign.find(
           (assignedTo) => assignedTo.UserName === updatedRow.AssignTo
         )?.UserId;
-
+  
         // Update formattedData with the retrieved IDs
         const formattedData = {
           ...formatDates(updatedRow),
@@ -304,25 +352,25 @@ const Leads = () => {
           QueryType: queryTypeId,
           AssignTo: assignToId,
         };
-
+  
         await axios.post(`${API_BASE_URL}/Leads/SaveLeads`, formattedData);
         await fetchData();
-        enqueueSnackbar("Leads updated successfully!", {
-          variant: "success",
+        enqueueSnackbar('Leads updated successfully!', {
+          variant: 'success',
         });
-
+  
         // Clear the current row data after the update
         setCurrentRow(null);
         setCurrentRowData(null);
       } else {
-        enqueueSnackbar("No data to update.", { variant: "warning" });
+        enqueueSnackbar('No data to update.', { variant: 'warning' });
       }
     } catch (error) {
-      console.log("Error updating Leads:", error);
-      enqueueSnackbar("Failed to update Leads!", { variant: "error" });
+      console.log('Error updating Leads:', error);
+      enqueueSnackbar('Failed to update Leads!', { variant: 'error' });
     }
   };
-
+  
   const handleStartDateChange = (event) => {
     setStartDate(event.target.value);
   };
@@ -680,7 +728,7 @@ export const CreateEnquiryModal = ({
         CreatedDate: formattedDate,
       };
 
-      console.log(updatedValues);
+      //console.log(updatedValues);
 
       await axios.post(`${API_BASE_URL}/Leads/SaveLeads`, updatedValues);
 
@@ -718,7 +766,7 @@ export const CreateEnquiryModal = ({
         style: { borderRadius: 10 },
       }}
     >
-      <div className="bg-[#3F4FAF] p-4 text-white text-center">
+      <div className="bg-[#3F4FAF] p-4 text-white text-center font-bold">
         <DialogTitle>CREATE LEAD</DialogTitle>
       </div>
       <DialogContent>
