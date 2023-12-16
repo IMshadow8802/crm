@@ -4,6 +4,7 @@ import logoImage from "../assets/logo.png";
 import chartFillImage from "../assets/Chart_fill.png";
 
 import ratingsImage from "../assets/ratings.png";
+import taskImage from "../assets/task.png";
 import { MenuOpen,Logout } from "@mui/icons-material";
 
 // import chatImage from "../assets/Chat.png";
@@ -47,7 +48,8 @@ const Sidebar = () => {
         // { title: "Order Slot Wise", src: ratingsImage },
       ],
     },
-    { title: "Kanban", src: calendarImage },
+    { title: "Task", src: taskImage },
+    // { title: "Kanban", src: calendarImage },
     // { title: "Search", src: searchImage },
     // { title: "Analytics", src: chartImage },
     // { title: "Inbox", src: chatImage },
@@ -160,7 +162,7 @@ const Sidebar = () => {
                           className="flex items-center relative"
                           onClick={() => handleSubmenuClick(submenu.title)}
                         >
-                          <img src={submenu.src} alt={submenu.title} />
+                          <img src={submenu.src} alt={submenu.title} className="text-white" />
                           <span>{submenu.title}</span>
                         </div>
                       </li>

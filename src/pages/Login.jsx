@@ -5,6 +5,7 @@ import axios from "axios";
 import { useSnackbar } from "notistack";
 import Navbar from "../components/Navbar";
 import { Box } from "@mui/material";
+import API_BASE_URL from "../config/config";
 
 const Login = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -15,7 +16,7 @@ const Login = () => {
   const handleLogin = async () => {
     try {
       const response = await axios.post(
-        "http://103.30.72.63/eCRM/api/User/fetchUser_Validate",
+        `${API_BASE_URL}/User/fetchUser_Validate`,
         {
           username,
           password,

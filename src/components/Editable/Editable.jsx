@@ -32,7 +32,7 @@ function Editable(props) {
           <div className="flex gap-2 items-center">
             <button
               type="submit"
-              className="cursor-pointer rounded-lg outline-none bg-blue-500 text-white border-none transition duration-100 ease-in-out px-4 py-2 hover:bg-blue-600 active:transform active:translate-y-2"
+              className="bg-green-500 hover:bg-green-600 text-white  px-4 py-2 rounded-lg shadow-xl mb-5"
             >
               {props.buttonText || "Add"}
             </button>
@@ -44,7 +44,7 @@ function Editable(props) {
         </form>
       ) : (
         <p
-          className={`editable_display pt-3 pb-3 rounded-lg cursor-pointer ${props.displayClass ? props.displayClass : ""}`}
+          className={`editable_display ${props.displayClass ? props.displayClass : ""}`}
           onClick={() => setIsEditable(true)}
         >
           {props.text}

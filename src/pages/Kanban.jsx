@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Board from "../components/Board/Board";
 import Editable from "../components/Editable/Editable";
 import Navbar from "../components/Navbar";
+import useAuthStore from "../zustand/authStore";
 
 function Kanban() {
   const [boards, setBoards] = useState(

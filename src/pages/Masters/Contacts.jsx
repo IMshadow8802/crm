@@ -17,27 +17,19 @@ import {
   useMediaQuery,
   useTheme,
   ThemeProvider,
-  Select,
   TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
 } from "@mui/material";
 import {
   Delete,
-  Edit,
   FileDownloadOutlined,
   PrintOutlined,
   AddOutlined,
-  FileUploadOutlined,
 } from "@mui/icons-material";
 import axios from "axios";
 import { useSnackbar } from "notistack";
 import API_BASE_URL from "../../config/config";
 import Navbar from "../../components/Navbar";
 import { Helmet } from "react-helmet-async";
-import readXlsxFile from "read-excel-file";
-import Papa from "papaparse";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { mkConfig, generateCsv, download } from "export-to-csv";

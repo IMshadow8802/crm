@@ -5,17 +5,7 @@ import Dropdown from "../Dropdown/Dropdown";
 import Editable from "../Editable/Editable";
 
 const lightColors = [
-    '#CCD7E5', // Blue 300
-    '#FBCFE8', // Pink 200
-    '#FFF8CD', // Yellow 200
-    '#FCA5A5', // Red 200
-    '#AED6F1', // Blue 100
-    '#F8BBD0', // Pink 100
-    '#FFF9C4', // Yellow 100
-    '#EF9A9A', // Red 100
     '#90CAF9', // Blue 200
-    '#F48FB1', // Pink 200
-    // Add more light colors here
   ];
   
 
