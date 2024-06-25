@@ -1,90 +1,96 @@
-import { Helmet } from "react-helmet";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { useSnackbar } from "notistack";
-import Navbar from "../components/Navbar";
-import { Box } from "@mui/material";
-import API_BASE_URL from "../config/config";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
+import API_BASE_URL from '../config/config';
+import useAuthStore from '../zustand/authStore';
 
 const Login = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const { enqueueSnackbar } = useSnackbar();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+  // Use the authentication state and actions from useAuthStore
+  const { isAuthenticated, login } = useAuthStore();
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!username || !password) {
+      enqueueSnackbar('Username or password field is empty', { variant: 'error' });
+      return;
+    }
+
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/User/fetchUser_Validate`,
-        {
-          username,
-          password,
-        }
-      );
-
-      // Save the entire response data to local storage
-      localStorage.setItem("userData", JSON.stringify(response.data));
-
-      enqueueSnackbar("Login successful", { variant: "success" });
-      navigate("/dashboard");
-    } catch (error) {
-      enqueueSnackbar("Invalid credentials. Please try again.", {
-        variant: "error",
+      const response = await axios.post(`${API_BASE_URL}/api/User/fetchUser_Validate`, {
+        username,
+        password,
       });
+      const userData = response.data;
+
+        localStorage.setItem('userData', JSON.stringify(userData[0]));
+        login(); // Update authentication state
+        enqueueSnackbar('Successfully logged in', { variant: 'success' });
+    } catch (error) {
+      enqueueSnackbar('Error logging in. Please try again.', { variant: 'error' });
     }
   };
 
+  useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData && isAuthenticated) {
+      // You can still perform actions if needed without setUser
+    }
+  }, [isAuthenticated]);
+
   return (
-    <Box display="flex" flexDirection="column" flexGrow={1}>
-    <Navbar title="LOGIN" />
-    <Helmet>
-      <title> Login</title>
-    </Helmet>
-    <div className="flex items-center justify-center h-screen overflow-x-hidden" style={{ maxHeight: "calc(100vh - 110px)" }}>
-      <div className="bg-white p-8 rounded-md shadow-lg w-96">
-        {/* Increased width to w-96 */}
-        <h2 className="text-2xl font-bold mb-4">Login</h2>
-        <div className="mb-4">
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-gray-600"
-          >
-            Username
-          </label>
-          <input
-            type="text"
-            id="username"
-            className="mt-1 p-3 w-full border rounded-md"
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          {/* Increased padding to p-3 */}
-        </div>
-        <div className="mb-4">
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-600"
-          >
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            className="mt-1 p-3 w-full border rounded-md"
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {/* Increased padding to p-3 */}
-        </div>
-        <button
-          className="bg-blue-500 text-white py-3 px-6 rounded-md hover:bg-blue-600"
-          onClick={handleLogin}
-        >
-          {/* Increased padding to py-3 and px-6 */}
-          Login
-        </button>
+    <div className="h-full w-full bg-white flex items-center justify-center">
+      <div className="w-full max-w-md p-6 bg-gray-100 rounded-md shadow-md">
+        <h1 className="text-3xl font-bold mb-6 text-center">eStock+</h1>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-6">
+            <label htmlFor="username" className="block text-sm font-semibold text-gray-600">
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="mb-6">
+            <div className="grid grid-cols-2 gap-4">
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-600">
+                Password
+              </label>
+              <div className="text-right">
+                <a href="#" className="text-blue-500">Forgot Password?</a>
+              </div>
+            </div>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="mb-6">
+            <button
+              type="submit"
+              className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-    </Box>
   );
 };
 

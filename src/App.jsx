@@ -14,7 +14,7 @@ function App() {
   return (
     <HelmetProvider>
       <DndProvider backend={HTML5Backend}>
-        <BrowserRouter basename="/eStockCRM">
+        <BrowserRouter basename="/eCRM">
           <SnackbarProvider
             maxSnack={1}
             style={{ maxWidth: "400px" }}
