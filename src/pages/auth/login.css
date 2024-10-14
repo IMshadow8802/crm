@@ -1,0 +1,266 @@
+.register-wrapper * {
+    padding: 0;
+    margin: 0;
+    color: #333; /* Dark Gray for text */
+    box-sizing: border-box;
+    word-wrap: break-word;
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Ubuntu, sans-serif;
+  }
+  
+  .register-wrapper {
+    min-height: 100%;
+    background-color: #f5f5f5; /* Soft Gray for background */
+  }
+  
+  .register-wrapper h1 {
+    letter-spacing: -1px;
+  }
+  
+  .register-wrapper a {
+    color: #ff85a2; /* Soft Pink for links */
+    text-decoration: unset;
+  }
+  
+  .register-wrapper .login-root {
+    background: #fff;
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  
+  .register-wrapper .loginbackground {
+    min-height: 692px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+  
+  .register-wrapper .flex-flex {
+    display: flex;
+  }
+  
+  .register-wrapper .align-center {
+    align-items: center;
+  }
+  
+  .register-wrapper .center-center {
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .register-wrapper .box-root {
+    box-sizing: border-box;
+  }
+  
+  .register-wrapper .flex-direction--column {
+    -ms-flex-direction: column;
+    flex-direction: column;
+  }
+  
+  .register-wrapper .loginbackground-gridContainer {
+    display: -ms-grid;
+    display: grid;
+    -ms-grid-columns: [start] 1fr [left-gutter] 86.6px 16 [left-gutter] 1fr [end];
+    grid-template-columns: [start] 1fr [left-gutter] repeat(16, 86.6px) [left-gutter] 1fr [end];
+    -ms-grid-rows: [top] 1fr [top-gutter] 64px 8 [bottom-gutter] 1fr [bottom];
+    grid-template-rows: [top] 1fr [top-gutter] repeat(8, 64px) [bottom-gutter] 1fr [bottom];
+    justify-content: center;
+    margin: 0 -2%;
+    transform: rotate(-12deg) skew(-12deg);
+  }
+  
+  .register-wrapper .box-divider--light-all-2 {
+    box-shadow: inset 0 0 0 2px #e3e8ee;
+  }
+  
+  .register-wrapper .box-background--blue {
+    background-color: #ff85a2; /* Soft Pink */
+  }
+  
+  .register-wrapper .box-background--white {
+    background-color: #ffffff;
+  }
+  
+  .register-wrapper .box-background--blue800 {
+    background-color: #a2e9ff; /* Soft Green */
+  }
+  
+  .register-wrapper .box-background--gray100 {
+    background-color: #e3e8ee;
+  }
+  
+  .register-wrapper .box-background--cyan200 {
+    background-color: #fff5ba; /* Soft Yellow */
+  }
+  
+  .register-wrapper .padding-top--64 {
+    padding-top: 64px;
+  }
+  
+  .register-wrapper .padding-top--24 {
+    padding-top: 24px;
+  }
+  
+  .register-wrapper .padding-top--48 {
+    padding-top: 48px;
+  }
+  
+  .register-wrapper .padding-bottom--24 {
+    padding-bottom: 24px;
+  }
+  
+  .register-wrapper .padding-horizontal--48 {
+    padding: 48px;
+  }
+  
+  .register-wrapper .padding-bottom--15 {
+    padding-bottom: 15px;
+  }
+  
+  .register-wrapper .flex-justifyContent--center {
+    -ms-flex-pack: center;
+    justify-content: center;
+  }
+  
+  .register-wrapper .formbg {
+      margin: 0px auto;
+      width: 100%;
+      max-width: 448px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: rgba(60, 66, 87, 0.12) 0px 7px 14px 0px, rgba(0, 0, 0, 0.12) 0px 3px 6px 0px;
+  }
+  .register-wrapper span {
+    display: block;
+    font-size: 20px;
+    line-height: 28px;
+    color: #333;
+  }
+  .register-wrapper label {
+    margin-bottom: 10px;
+  }
+  .register-wrapper .reset-pass a,label {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+  }
+  .register-wrapper .reset-pass > a {
+    text-align: right;
+    margin-bottom: 10px;
+  }
+  .register-wrapper .grid--50-50 {
+    display: grid;
+    grid-template-columns: 50% 50%;
+    align-items: center;
+  }
+  
+  .register-wrapper .field input {
+    font-size: 16px;
+    line-height: 28px;
+    padding: 8px 16px;
+    width: 100%;
+    min-height: 44px;
+    border: unset;
+    border-radius: 14px;
+    outline-color: rgba(255, 133, 162, 0.5); /* Soft Pink */
+    background-color: rgb(255, 255, 255);
+    box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(60, 66, 87, 0.16) 0px 0px 0px 1px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+  }
+  
+  .register-wrapper input[type="submit"] {
+    background-color: #ff85a2; /* Soft Pink */
+    box-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0.12) 0px 1px 1px 0px, 
+                rgba(255, 133, 162, 1) 0px 0px 0px 1px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(0, 0, 0, 0) 0px 0px 0px 0px, 
+                rgba(60, 66, 87, 0.08) 0px 2px 5px 0px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 14px;
+  }
+  
+  .register-wrapper .field-checkbox input {
+    width: 20px;
+    height: 15px;
+    margin-right: 5px; 
+    box-shadow: unset;
+    min-height: unset;
+  }
+  
+  .register-wrapper .field-checkbox label {
+    display: flex;
+    align-items: center;
+    margin: 0;
+  }
+  
+  .register-wrapper a.ssolink {
+    display: block;
+    text-align: center;
+    font-weight: 600;
+  }
+  
+  .register-wrapper .footer-link span {
+    font-size: 14px;
+    text-align: center;
+  }
+  
+  .register-wrapper .listing a {
+    color: #697386;
+    font-weight: 600;
+    margin: 0 10px;
+  }
+  
+  .register-wrapper .animationRightLeft {
+    animation: animationRightLeft 2s ease-in-out infinite;
+  }
+  
+  .register-wrapper .animationLeftRight {
+    animation: animationLeftRight 2s ease-in-out infinite;
+  }
+  
+  .register-wrapper .tans3s {
+    animation: animationLeftRight 3s ease-in-out infinite;
+  }
+  
+  .register-wrapper .tans4s {
+    animation: animationLeftRight 4s ease-in-out infinite;
+  }
+  
+  @keyframes animationLeftRight {
+    0% {
+      transform: translateX(0px);
+    }
+    50% {
+      transform: translateX(1000px);
+    }
+    100% {
+      transform: translateX(0px);
+    }
+  } 
+  
+  @keyframes animationRightLeft {
+    0% {
+      transform: translateX(0px);
+    }
+    50% {
+      transform: translateX(-1000px);
+    }
+    100% {
+      transform: translateX(0px);
+    }
+  }
+  

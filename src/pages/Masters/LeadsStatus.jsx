@@ -187,7 +187,7 @@ const LeadStatus = () => {
     try {
       const response = await axios.post(
         `${API_BASE_URL}/LeadsStatus/FetchLeadsStatus`,
-        { Id: 0 }
+        { Id: 0,StartDate:formattedStartDate,EndDate:formattedEndDate },
       );
       console.log(response.data);
       setTableData(response.data);

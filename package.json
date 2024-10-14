@@ -51,7 +51,7 @@
     "read-excel-file": "^5.7.1",
     "uuid": "^9.0.1",
     "uuidv4": "^6.2.13",
-    "zustand": "^4.4.7"
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

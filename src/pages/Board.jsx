@@ -4,7 +4,6 @@ import useAuthStore from "../zustand/authStore";
 import { Edit, Delete } from "@mui/icons-material";
 import CardDialog from "./CardDialog";
 import BoardDialog from "./BoardDialog";
-import API_BASE_URL from "../config/config";
 import axios from "axios";
 import { useSnackbar } from "notistack";
 import DraggableCard from "../components/DraggableCard";
@@ -26,6 +25,7 @@ const Board = () => {
   const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const { API_BASE_URL, isAuthenticated } = useAuthStore();
 
   const fixedColors = ["#90CAF9", "#FFC107", "#8BC34A", "#FF5722", "#E91E63"];
 
@@ -151,8 +151,8 @@ const Board = () => {
       BoardId: selectedBoard ? selectedBoard.BoardId : 0,
       Board: newBoardName,
       Color: newBoardColor,
-      CompId: compid,
-      BranchId: branchid,
+      CompId: 1,
+      BranchId: 1,
       CreateUid: 1,
       CreateDate: formattedDate,
       EditUid: 1,
@@ -310,151 +310,6 @@ const Board = () => {
       setCombinedData(updatedCombinedData);
     }
   };
-  
-
-  // const handleDragEnd = async (result) => {
-  //   console.log(result);
-
-  //   if (!result.destination) {
-  //     return;
-  //   }
-
-  //   const sourceType = result.type;
-  //   const destinationType = result.destination.droppableId.split("-")[0];
-  //   const sourceIndex = result.source.index;
-  //   const destinationIndex = result.destination.index;
-
-  //   if (sourceType === "BOARD" && destinationType === "boards") {
-  //     // Handle board drag within the board list
-  //     const movedBoard = combinedData[sourceIndex];
-
-  //     const updatedCombinedData = [...combinedData];
-  //     updatedCombinedData.splice(sourceIndex, 1);
-  //     updatedCombinedData.splice(destinationIndex, 0, movedBoard);
-
-  //     setCombinedData(updatedCombinedData);
-  //   } else if (sourceType === "CARD" && destinationType === "cards") {
-  //     // Handle card drag within the same board
-  //     const sourceBoardId = parseInt(
-  //       result.source.droppableId.split("-")[2],
-  //       10
-  //     );
-  //     const destinationBoardId = parseInt(
-  //       result.destination.droppableId.split("-")[2],
-  //       10
-  //     );
-
-  //     if (sourceBoardId === destinationBoardId) {
-  //       const updatedCombinedData = [...combinedData];
-  //       const sourceBoardIndex = updatedCombinedData.findIndex(
-  //         (board) => board.BoardId === sourceBoardId
-  //       );
-
-  //       const sourceCardId =
-  //         updatedCombinedData[sourceBoardIndex].cards[sourceIndex].TaskId;
-
-  //       const movedCard =
-  //         updatedCombinedData[sourceBoardIndex].cards[sourceIndex];
-
-  //       // Remove the card from the source index
-  //       updatedCombinedData[sourceBoardIndex].cards.splice(sourceIndex, 1);
-
-  //       // Insert the card at the destination index
-  //       updatedCombinedData[sourceBoardIndex].cards.splice(
-  //         destinationIndex,
-  //         0,
-  //         movedCard
-  //       );
-
-  //       // Now you can use the sourceCardId to find the card in cardData
-  //       const sourceCard = cardData.find(
-  //         (card) => card.TaskId === sourceCardId
-  //       );
-
-  //       // Update the BoardId in the sourceCard
-  //       sourceCard.BoardId = destinationBoardId;
-
-  //       console.log("Source Card:", sourceCard);
-
-  //       // Send the updated card data to the API
-  //       try {
-  //         const response = await axios.post(
-  //           "http://103.30.72.63/eCRM/api/Task/SaveTask",
-  //           sourceCard
-  //         );
-
-  //         if (response.status === 200) {
-  //           console.log("Card data updated successfully!");
-  //         } else {
-  //           console.error("Failed to update card data");
-  //         }
-  //       } catch (error) {
-  //         console.error("Error updating card data:", error);
-  //       }
-
-  //       setCombinedData(updatedCombinedData);
-  //     } else {
-  //       // Handle card drag between boards
-  //       const sourceBoardIndex = combinedData.findIndex(
-  //         (board) => board.BoardId === sourceBoardId
-  //       );
-  //       const destinationBoardIndex = combinedData.findIndex(
-  //         (board) => board.BoardId === destinationBoardId
-  //       );
-
-  //       if (sourceBoardIndex === -1 || destinationBoardIndex === -1) {
-  //         console.error(
-  //           "Source or destination board not found in combined data"
-  //         );
-  //         console.log("Combined Data after failed update:", combinedData);
-  //         return;
-  //       }
-
-  //       const sourceCardId =
-  //         combinedData[sourceBoardIndex].cards[sourceIndex].TaskId;
-
-  //       const movedCard = combinedData[sourceBoardIndex].cards[sourceIndex];
-
-  //       // Remove the card from the source board
-  //       combinedData[sourceBoardIndex].cards.splice(sourceIndex, 1);
-
-  //       // Insert the card into the destination board
-  //       combinedData[destinationBoardIndex].cards.splice(
-  //         destinationIndex,
-  //         0,
-  //         movedCard
-  //       );
-
-  //       // Now you can use the sourceCardId to find the card in cardData
-  //       const sourceCard = cardData.find(
-  //         (card) => card.TaskId === sourceCardId
-  //       );
-
-  //       // Update the BoardId in the sourceCard
-  //       sourceCard.BoardId = destinationBoardId;
-
-  //       console.log("Source Card:", sourceCard);
-
-  //       // Send the updated card data to the API
-  //       try {
-  //         const response = await axios.post(
-  //           "http://103.30.72.63/eCRM/api/Task/SaveTask",
-  //           sourceCard
-  //         );
-
-  //         if (response.status === 200) {
-  //           console.log("Card data updated successfully!");
-  //         } else {
-  //           console.error("Failed to update card data");
-  //         }
-  //       } catch (error) {
-  //         console.error("Error updating card data:", error);
-  //       }
-
-  //       setCombinedData([...combinedData]);
-  //     }
-  //   }
-  // };
 
   return (
     <>

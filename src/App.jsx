@@ -1,7 +1,8 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { SnackbarProvider } from "notistack";
-import { Dashboard, Login, Kanban } from "./pages";
+import { Dashboard, Kanban } from "./pages";
+import Login from "./pages/auth/Login"
 import { Leads, LeadStatus, Contacts, Complaint } from "./pages/Masters";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RootLayout from "./components/RootLayout";

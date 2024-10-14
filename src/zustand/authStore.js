@@ -4,7 +4,7 @@ const useAuthStore = create((set) => ({
   isAuthenticated: !!localStorage.getItem('userData'),
   login: () => set({ isAuthenticated: true }),
   logout: () => set({ isAuthenticated: false }),
-  API_BASE_URL:"https://api.grafdoer.co/eCRM",
+  API_BASE_URL:"https://api.manoharlalonline.com/eCRM/api",
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
